@@ -1,11 +1,11 @@
 {
-    "name": "m_football_plus",
-    "short_name": "m_football_plus",
+    "name": "M Football Plus",
+    "short_name": "M Football Plus",
     "start_url": ".",
     "display": "standalone",
-    "background_color": "#0175C2",
-    "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
+    "background_color": "#0A192F",
+    "theme_color": "#0A192F",
+    "description": "M Football Plus - Elite Football Scores, Live Matches & Tactical Insights",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [
