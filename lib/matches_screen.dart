@@ -214,7 +214,7 @@ class _MatchesScreenState extends State<MatchesScreen> {
     for (final m in _filteredMatches) {
       final country = m.leagueCountry ?? '';
       final leagueSw = m.getLeague(widget.isSwahili);
-      final key = "${leagueSw}__$country";
+      final key = "${m.leagueEn.trim().toLowerCase()}__${country.trim().toLowerCase()}";
 
       if (!map.containsKey(key)) {
         map[key] = LeagueGroup(
@@ -1132,7 +1132,9 @@ Pakua M Football Plus kupata matokeo mubashara na takwimu zote!''';
   // --- Kichwa cha Ligi (League Header with Flag/Logo) ---
   Widget _buildLeagueHeader(LeagueGroup group, bool isSw) {
     final country = group.country?.trim() ?? '';
-    final showCountryBadge = country.isNotEmpty && !group.leagueName.contains(country);
+    final showCountryBadge = country.isNotEmpty &&
+        !group.leagueName.toLowerCase().contains(country.toLowerCase()) &&
+        !group.leagueName.contains('(');
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
@@ -1379,6 +1381,7 @@ Pakua M Football Plus kupata matokeo mubashara na takwimu zote!''';
 
   // Nembo ya Timu yenye Fallback ya Soka
   Widget _buildTeamBadge(String logoUrl, String teamName, {double size = 28}) {
+    final effectiveLogo = FootballApiService.getTeamLogo(teamName, fallbackUrl: logoUrl);
     return Container(
       width: size,
       height: size,
@@ -1391,9 +1394,9 @@ Pakua M Football Plus kupata matokeo mubashara na takwimu zote!''';
         ),
       ),
       clipBehavior: Clip.antiAlias,
-      child: logoUrl.isNotEmpty
+      child: effectiveLogo.isNotEmpty
           ? Image.network(
-              logoUrl,
+              effectiveLogo,
               fit: BoxFit.contain,
               errorBuilder: (_, __, ___) => Center(
                 child: Icon(Icons.sports_soccer, size: size * 0.55, color: MColors.textWhite),

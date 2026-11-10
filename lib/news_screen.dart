@@ -55,6 +55,14 @@ class _NewsScreenState extends State<NewsScreen> {
     _loadNews();
   }
 
+  @override
+  void didUpdateWidget(covariant NewsScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.isSwahili != widget.isSwahili) {
+      setState(() {});
+    }
+  }
+
   NewsCategory get _currentCategory => _categories[_selectedCategoryIndex];
 
   Future<void> _loadNews({bool forceRefresh = false}) async {
@@ -262,13 +270,15 @@ class _NewsScreenState extends State<NewsScreen> {
     );
   }
 
-  // Kadi Kubwa ya Kwanza (Featured Hero Card)
+  // Kadi Kubwa ya Kwanza (Featured Hero Card yenye AspectRatio isiyokata picha)
   Widget _buildFeaturedHeroCard(NewsArticleModel article, bool isSw) {
+    final title = article.getTitle(isSw);
+    final description = article.getDescription(isSw);
+
     return GestureDetector(
       onTap: () => _showArticleReaderModal(article, isSw),
       child: Container(
         margin: const EdgeInsets.only(bottom: 18),
-        height: 230,
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(16),
           border: Border.all(color: MColors.scoresCyan.withValues(alpha: 0.4), width: 1.4),
@@ -281,109 +291,113 @@ class _NewsScreenState extends State<NewsScreen> {
           ],
         ),
         clipBehavior: Clip.antiAlias,
-        child: Stack(
-          children: [
-            // Image yenye fallback
-            Positioned.fill(
-              child: Image.network(
-                article.imageUrl,
-                fit: BoxFit.cover,
-                errorBuilder: (_, __, ___) => Container(
-                  color: MColors.surface,
-                  child: const Center(
-                    child: Icon(Icons.newspaper_rounded, size: 48, color: MColors.scoresCyan),
+        child: AspectRatio(
+          aspectRatio: 16 / 9.5,
+          child: Stack(
+            children: [
+              // Image yenye fallback na alignment nzuri
+              Positioned.fill(
+                child: Image.network(
+                  article.imageUrl,
+                  fit: BoxFit.cover,
+                  alignment: Alignment.center,
+                  errorBuilder: (_, __, ___) => Container(
+                    color: MColors.surface,
+                    child: const Center(
+                      child: Icon(Icons.newspaper_rounded, size: 48, color: MColors.scoresCyan),
+                    ),
                   ),
                 ),
               ),
-            ),
 
-            // Gradient Overlay
-            Positioned.fill(
-              child: Container(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                    colors: [
-                      Colors.transparent,
-                      Colors.black.withValues(alpha: 0.35),
-                      Colors.black.withValues(alpha: 0.92),
-                    ],
-                    stops: const [0.3, 0.6, 1.0],
+              // Gradient Overlay
+              Positioned.fill(
+                child: Container(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [
+                        Colors.transparent,
+                        Colors.black.withValues(alpha: 0.35),
+                        Colors.black.withValues(alpha: 0.95),
+                      ],
+                      stops: const [0.25, 0.55, 1.0],
+                    ),
                   ),
                 ),
               ),
-            ),
 
-            // Badges na Headline
-            Positioned(
-              left: 14,
-              right: 14,
-              bottom: 14,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  // Featured Badge
-                  Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                        decoration: BoxDecoration(
-                          color: MColors.highlightsGold,
-                          borderRadius: BorderRadius.circular(6),
-                        ),
-                        child: Text(
-                          isSw ? 'HABARI KUU' : 'TOP STORY',
-                          style: GoogleFonts.outfit(
-                            fontSize: 10,
-                            fontWeight: FontWeight.w900,
-                            color: MColors.background,
+              // Badges na Headline
+              Positioned(
+                left: 14,
+                right: 14,
+                bottom: 12,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // Featured Badge
+                    Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                          decoration: BoxDecoration(
+                            color: MColors.highlightsGold,
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: Text(
+                            isSw ? 'HABARI KUU' : 'TOP STORY',
+                            style: GoogleFonts.outfit(
+                              fontSize: 10,
+                              fontWeight: FontWeight.w900,
+                              color: MColors.background,
+                            ),
                           ),
                         ),
-                      ),
-                      const SizedBox(width: 8),
-                      Text(
-                        article.source,
-                        style: GoogleFonts.manrope(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w600,
-                          color: MColors.textWhite.withValues(alpha: 0.8),
+                        const SizedBox(width: 8),
+                        Text(
+                          article.source,
+                          style: GoogleFonts.manrope(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
+                            color: MColors.textWhite.withValues(alpha: 0.8),
+                          ),
                         ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-
-                  // Headline Bold Outfit
-                  Text(
-                    article.title,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: GoogleFonts.outfit(
-                      fontSize: 16.5,
-                      fontWeight: FontWeight.bold,
-                      color: MColors.textWhite,
-                      height: 1.25,
+                      ],
                     ),
-                  ),
-                  const SizedBox(height: 6),
+                    const SizedBox(height: 6),
 
-                  // Description Manrope
-                  if (article.description.isNotEmpty)
+                    // Headline Bold Outfit
                     Text(
-                      article.description,
+                      title,
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
-                      style: GoogleFonts.manrope(
-                        fontSize: 12,
-                        color: MColors.textWhite.withValues(alpha: 0.75),
+                      style: GoogleFonts.outfit(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: MColors.textWhite,
+                        height: 1.25,
                       ),
                     ),
-                ],
+                    const SizedBox(height: 4),
+
+                    // Description Manrope
+                    if (description.isNotEmpty)
+                      Text(
+                        description,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: GoogleFonts.manrope(
+                          fontSize: 11.5,
+                          color: MColors.textWhite.withValues(alpha: 0.75),
+                        ),
+                      ),
+                  ],
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -391,6 +405,9 @@ class _NewsScreenState extends State<NewsScreen> {
 
   // Kadi ya Habari za Kawaida (List Tile with Thumbnail)
   Widget _buildArticleTile(NewsArticleModel article, bool isSw) {
+    final title = article.getTitle(isSw);
+    final description = article.getDescription(isSw);
+
     return GestureDetector(
       onTap: () => _showArticleReaderModal(article, isSw),
       child: Container(
@@ -407,7 +424,7 @@ class _NewsScreenState extends State<NewsScreen> {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Thumbnail Image
+            // Thumbnail Image yenye AspectRatio
             ClipRRect(
               borderRadius: BorderRadius.circular(10),
               child: SizedBox(
@@ -416,6 +433,7 @@ class _NewsScreenState extends State<NewsScreen> {
                 child: Image.network(
                   article.imageUrl,
                   fit: BoxFit.cover,
+                  alignment: Alignment.center,
                   errorBuilder: (_, __, ___) => Container(
                     color: MColors.background,
                     child: const Icon(Icons.sports_soccer, size: 24, color: MColors.scoresCyan),
@@ -465,7 +483,7 @@ class _NewsScreenState extends State<NewsScreen> {
 
                   // Headline in Outfit
                   Text(
-                    article.title,
+                    title,
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                     style: GoogleFonts.outfit(
@@ -478,9 +496,9 @@ class _NewsScreenState extends State<NewsScreen> {
                   const SizedBox(height: 4),
 
                   // Description in Manrope
-                  if (article.description.isNotEmpty)
+                  if (description.isNotEmpty)
                     Text(
-                      article.description,
+                      description,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: GoogleFonts.manrope(
@@ -497,155 +515,9 @@ class _NewsScreenState extends State<NewsScreen> {
     );
   }
 
-  // --- Modal Bottom Sheet ya Kusoma Habari Kamili ---
+  // --- Modal Bottom Sheet ya Kusoma Habari Kamili (Bilingual & Uncut Image) ---
   void _showArticleReaderModal(NewsArticleModel article, bool isSw) {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: Colors.transparent,
-      isScrollControlled: true,
-      builder: (context) {
-        return Container(
-          constraints: BoxConstraints(
-            maxHeight: MediaQuery.of(context).size.height * 0.82,
-          ),
-          decoration: const BoxDecoration(
-            color: MColors.surface,
-            borderRadius: BorderRadius.vertical(top: Radius.circular(22)),
-            border: Border(
-              top: BorderSide(color: MColors.scoresCyan, width: 1.6),
-            ),
-          ),
-          padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Drag Handle
-              Center(
-                child: Container(
-                  width: 38,
-                  height: 4,
-                  margin: const EdgeInsets.only(bottom: 14),
-                  decoration: BoxDecoration(
-                    color: MColors.textWhite.withValues(alpha: 0.3),
-                    borderRadius: BorderRadius.circular(2),
-                  ),
-                ),
-              ),
-
-              // Article Image
-              ClipRRect(
-                borderRadius: BorderRadius.circular(12),
-                child: SizedBox(
-                  width: double.infinity,
-                  height: 180,
-                  child: Image.network(
-                    article.imageUrl,
-                    fit: BoxFit.cover,
-                    errorBuilder: (_, __, ___) => Container(
-                      color: MColors.background,
-                      child: const Center(
-                        child: Icon(Icons.newspaper_rounded, size: 40, color: MColors.scoresCyan),
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 14),
-
-              // Source & Category Row
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                    decoration: BoxDecoration(
-                      color: MColors.scoresCyan.withValues(alpha: 0.2),
-                      borderRadius: BorderRadius.circular(6),
-                    ),
-                    child: Text(
-                      article.source,
-                      style: GoogleFonts.outfit(
-                        fontSize: 11,
-                        fontWeight: FontWeight.bold,
-                        color: MColors.scoresCyan,
-                      ),
-                    ),
-                  ),
-                  Text(
-                    isSw ? 'Habari ya Uhakika' : 'Verified Sports Report',
-                    style: GoogleFonts.manrope(
-                      fontSize: 11,
-                      color: MColors.highlightsGold,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 10),
-
-              // Full Title
-              Text(
-                article.title,
-                style: GoogleFonts.outfit(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: MColors.textWhite,
-                  height: 1.3,
-                ),
-              ),
-              const SizedBox(height: 12),
-
-              // Full Description
-              Expanded(
-                child: SingleChildScrollView(
-                  physics: const BouncingScrollPhysics(),
-                  child: Text(
-                    article.description.isNotEmpty
-                        ? article.description
-                        : (isSw
-                            ? 'Maelezo kamili ya habari hii yanapatikana kwenye mtandao rasmi wa ripoti hii ya soka.'
-                            : 'Full details of this report are available on the official sports publication.'),
-                    style: GoogleFonts.manrope(
-                      fontSize: 13.5,
-                      color: MColors.textWhite.withValues(alpha: 0.85),
-                      height: 1.55,
-                    ),
-                  ),
-                ),
-              ),
-
-              const SizedBox(height: 16),
-
-              // Action Buttons
-              Row(
-                children: [
-                  Expanded(
-                    child: ElevatedButton.icon(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: MColors.scoresCyan,
-                        foregroundColor: MColors.background,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                        padding: const EdgeInsets.symmetric(vertical: 12),
-                      ),
-                      onPressed: () => Navigator.pop(context),
-                      icon: const Icon(Icons.check_rounded, size: 18),
-                      label: Text(
-                        isSw ? 'Sawa, Nimeelewa' : 'Done',
-                        style: GoogleFonts.outfit(
-                          fontSize: 13,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        );
-      },
-    );
+    showArticleReaderModal(context, article, isSw);
   }
 
   Widget _buildEmptyState(bool isSw) {
@@ -675,4 +547,161 @@ class _NewsScreenState extends State<NewsScreen> {
       ),
     );
   }
+}
+
+// Global modal reader inayotumika pia kwenye Dashboard
+void showArticleReaderModal(BuildContext context, NewsArticleModel article, bool isSw) {
+  final title = article.getTitle(isSw);
+  final description = article.getDescription(isSw);
+
+  showModalBottomSheet(
+    context: context,
+    backgroundColor: Colors.transparent,
+    isScrollControlled: true,
+    builder: (context) {
+      return Container(
+        constraints: BoxConstraints(
+          maxHeight: MediaQuery.of(context).size.height * 0.85,
+        ),
+        decoration: const BoxDecoration(
+          color: MColors.surface,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(22)),
+          border: Border(
+            top: BorderSide(color: MColors.scoresCyan, width: 1.6),
+          ),
+        ),
+        padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Drag Handle
+            Center(
+              child: Container(
+                width: 38,
+                height: 4,
+                margin: const EdgeInsets.only(bottom: 14),
+                decoration: BoxDecoration(
+                  color: MColors.textWhite.withValues(alpha: 0.3),
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+
+            // Article Image yenye AspectRatio (16:9) isiyokatwa
+            ClipRRect(
+              borderRadius: BorderRadius.circular(12),
+              child: AspectRatio(
+                aspectRatio: 16 / 9,
+                child: Container(
+                  color: MColors.background,
+                  child: Image.network(
+                    article.imageUrl,
+                    fit: BoxFit.cover,
+                    alignment: Alignment.center,
+                    errorBuilder: (_, __, ___) => Container(
+                      color: MColors.background,
+                      child: const Center(
+                        child: Icon(Icons.newspaper_rounded, size: 40, color: MColors.scoresCyan),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 14),
+
+            // Source & Category Row
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  decoration: BoxDecoration(
+                    color: MColors.scoresCyan.withValues(alpha: 0.2),
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: Text(
+                    article.source,
+                    style: GoogleFonts.outfit(
+                      fontSize: 11,
+                      fontWeight: FontWeight.bold,
+                      color: MColors.scoresCyan,
+                    ),
+                  ),
+                ),
+                Text(
+                  isSw ? 'Habari ya Uhakika' : 'Verified Sports Report',
+                  style: GoogleFonts.manrope(
+                    fontSize: 11,
+                    color: MColors.highlightsGold,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 10),
+
+            // Full Title (Bilingual)
+            Text(
+              title,
+              style: GoogleFonts.outfit(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: MColors.textWhite,
+                height: 1.3,
+              ),
+            ),
+            const SizedBox(height: 12),
+
+            // Full Description (Bilingual)
+            Expanded(
+              child: SingleChildScrollView(
+                physics: const BouncingScrollPhysics(),
+                child: Text(
+                  description.isNotEmpty
+                      ? description
+                      : (isSw
+                          ? 'Maelezo kamili ya habari hii yanapatikana kwenye mtandao rasmi wa ripoti hii ya soka.'
+                          : 'Full details of this report are available on the official sports publication.'),
+                  style: GoogleFonts.manrope(
+                    fontSize: 13.5,
+                    color: MColors.textWhite.withValues(alpha: 0.85),
+                    height: 1.55,
+                  ),
+                ),
+              ),
+            ),
+
+            const SizedBox(height: 16),
+
+            // Action Buttons
+            Row(
+              children: [
+                Expanded(
+                  child: ElevatedButton.icon(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: MColors.scoresCyan,
+                      foregroundColor: MColors.background,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                    ),
+                    onPressed: () => Navigator.pop(context),
+                    icon: const Icon(Icons.check_rounded, size: 18),
+                    label: Text(
+                      isSw ? 'Sawa, Nimeelewa' : 'Done',
+                      style: GoogleFonts.outfit(
+                        fontSize: 13,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      );
+    },
+  );
 }

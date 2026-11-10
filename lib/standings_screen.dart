@@ -50,38 +50,32 @@ class _StandingsScreenState extends State<StandingsScreen> {
 
   int _selectedLeagueIndex = 0;
   final int _selectedSeason = 2024;
-  bool _isLoading = false;
-  List<StandingItem> _standings = [];
+  late Future<List<StandingItem>> _standingsFuture;
   int? _expandedTeamId;
 
   @override
   void initState() {
     super.initState();
-    _loadStandings();
+    _fetchStandings();
   }
 
   LeagueMeta get _currentLeague => _leagues[_selectedLeagueIndex];
 
-  Future<void> _loadStandings({bool forceRefresh = false}) async {
-    if (!mounted) return;
-    setState(() => _isLoading = true);
+  void _fetchStandings({bool forceRefresh = false}) {
+    _standingsFuture = FootballApiService().getStandings(
+      _currentLeague.id.toString(),
+      season: _selectedSeason,
+      forceRefresh: forceRefresh,
+    );
+  }
 
+  Future<void> _refreshStandings() async {
+    setState(() {
+      _fetchStandings(forceRefresh: true);
+    });
     try {
-      final results = await FootballApiService().getStandings(
-        leagueId: _currentLeague.id,
-        season: _selectedSeason,
-        forceRefresh: forceRefresh,
-      );
-
-      if (!mounted) return;
-      setState(() {
-        _standings = results;
-        _isLoading = false;
-      });
-    } catch (e) {
-      if (!mounted) return;
-      setState(() => _isLoading = false);
-    }
+      await _standingsFuture;
+    } catch (_) {}
   }
 
   void _onLeagueSelected(int index) {
@@ -89,8 +83,8 @@ class _StandingsScreenState extends State<StandingsScreen> {
       setState(() {
         _selectedLeagueIndex = index;
         _expandedTeamId = null;
+        _fetchStandings();
       });
-      _loadStandings();
     }
   }
 
@@ -111,19 +105,47 @@ class _StandingsScreenState extends State<StandingsScreen> {
 
             const SizedBox(height: 8),
 
-            // 3. Jedwali la Msimamo (Standings Table Header & Body)
+            // 3. Jedwali la Msimamo (Standings Table Header & Body) kupitia FutureBuilder
             Expanded(
               child: RefreshIndicator(
                 color: MColors.scoresCyan,
                 backgroundColor: MColors.surface,
-                onRefresh: () => _loadStandings(forceRefresh: true),
-                child: _isLoading
-                    ? const Center(
-                        child: CircularProgressIndicator(color: MColors.scoresCyan),
-                      )
-                    : _standings.isEmpty
-                        ? _buildEmptyState(isSw)
-                        : _buildStandingsList(isSw),
+                onRefresh: _refreshStandings,
+                child: FutureBuilder<List<StandingItem>>(
+                  future: _standingsFuture,
+                  builder: (context, snapshot) {
+                    if (snapshot.connectionState == ConnectionState.waiting) {
+                      return Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            const CircularProgressIndicator(color: MColors.scoresCyan),
+                            const SizedBox(height: 14),
+                            Text(
+                              isSw ? 'Inapakia msimamo halisi kutoka API...' : 'Loading real standings from API...',
+                              style: GoogleFonts.manrope(
+                                fontSize: 13,
+                                color: MColors.scoresCyan,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    }
+
+                    if (snapshot.hasError) {
+                      return _buildErrorState(snapshot.error, isSw);
+                    }
+
+                    final standings = snapshot.data ?? [];
+                    if (standings.isEmpty) {
+                      return _buildEmptyState(isSw);
+                    }
+
+                    return _buildStandingsList(standings, isSw);
+                  },
+                ),
               ),
             ),
           ],
@@ -170,7 +192,7 @@ class _StandingsScreenState extends State<StandingsScreen> {
               border: Border.all(color: MColors.scoresCyan.withValues(alpha: 0.3)),
             ),
             child: Text(
-              '$_selectedSeason/${_selectedSeason + 1}',
+              '2024/2025',
               style: GoogleFonts.manrope(
                 fontSize: 12,
                 fontWeight: FontWeight.bold,
@@ -243,20 +265,20 @@ class _StandingsScreenState extends State<StandingsScreen> {
   }
 
   // --- 3. Standings Table & Rows ---
-  Widget _buildStandingsList(bool isSw) {
+  Widget _buildStandingsList(List<StandingItem> standings, bool isSw) {
     return ListView.builder(
       physics: const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics()),
       padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
-      itemCount: _standings.length + 1, // +1 kwa Table Header
+      itemCount: standings.length + 1, // +1 kwa Table Header
       itemBuilder: (context, index) {
         if (index == 0) {
           return _buildTableHeader(isSw);
         }
 
-        final standing = _standings[index - 1];
+        final standing = standings[index - 1];
         final isExpanded = _expandedTeamId == standing.teamId;
 
-        return _buildTeamStandingRow(standing, index - 1, isExpanded, isSw);
+        return _buildTeamStandingRow(standing, index - 1, isExpanded, isSw, standings.length);
       },
     );
   }
@@ -337,14 +359,20 @@ class _StandingsScreenState extends State<StandingsScreen> {
   }
 
   // Row ya Timu Moja
-  Widget _buildTeamStandingRow(StandingItem item, int index, bool isExpanded, bool isSw) {
+  Widget _buildTeamStandingRow(
+    StandingItem item,
+    int index,
+    bool isExpanded,
+    bool isSw,
+    int totalTeams,
+  ) {
     // Alama Maalum:
     // Nafasi ya 1 = Gold Mbingwa
     // Nafasi 2 na 3 = Cyan Klabu Bingwa
     // Nafasi za chini (3 za mwisho) = Red Kushuka Daraja
     final isTop1 = item.rank == 1;
     final isTop3 = item.rank <= 3;
-    final isRelegation = _standings.length > 6 && item.rank > (_standings.length - 3);
+    final isRelegation = totalTeams > 6 && item.rank > (totalTeams - 3);
 
     Color rankColor;
     if (isTop1) {
@@ -400,21 +428,26 @@ class _StandingsScreenState extends State<StandingsScreen> {
                   ),
 
                   // 2. Team Logo
-                  Container(
-                    width: 24,
-                    height: 24,
-                    margin: const EdgeInsets.only(right: 8),
-                    child: item.teamLogo.isNotEmpty
-                        ? Image.network(
-                            item.teamLogo,
-                            fit: BoxFit.contain,
-                            errorBuilder: (_, __, ___) => const Icon(
-                              Icons.shield_outlined,
-                              size: 16,
-                              color: MColors.textWhite,
-                            ),
-                          )
-                        : const Icon(Icons.shield_outlined, size: 16, color: MColors.textWhite),
+                  Builder(
+                    builder: (context) {
+                      final effectiveLogo = FootballApiService.getTeamLogo(item.teamName, fallbackUrl: item.teamLogo);
+                      return Container(
+                        width: 24,
+                        height: 24,
+                        margin: const EdgeInsets.only(right: 8),
+                        child: effectiveLogo.isNotEmpty
+                            ? Image.network(
+                                effectiveLogo,
+                                fit: BoxFit.contain,
+                                errorBuilder: (_, __, ___) => const Icon(
+                                  Icons.shield_outlined,
+                                  size: 16,
+                                  color: MColors.textWhite,
+                                ),
+                              )
+                            : const Icon(Icons.shield_outlined, size: 16, color: MColors.textWhite),
+                      );
+                    },
                   ),
 
                   // 3. Team Name (Uncut)
@@ -568,28 +601,131 @@ class _StandingsScreenState extends State<StandingsScreen> {
 
   Widget _buildEmptyState(bool isSw) {
     return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          const Icon(Icons.table_chart_outlined, size: 48, color: MColors.scoresCyan),
-          const SizedBox(height: 12),
-          Text(
-            isSw ? 'Msimamo haujapatikana kwa sasa' : 'No standings data available right now',
-            style: GoogleFonts.outfit(
-              fontSize: 15,
-              fontWeight: FontWeight.bold,
-              color: MColors.textWhite,
-            ),
+      child: SingleChildScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        child: Padding(
+          padding: const EdgeInsets.all(24.0),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(Icons.table_chart_outlined, size: 48, color: MColors.scoresCyan),
+              const SizedBox(height: 12),
+              Text(
+                isSw ? 'Msimamo haujapatikana kwa sasa' : 'No standings data available right now',
+                textAlign: TextAlign.center,
+                style: GoogleFonts.outfit(
+                  fontSize: 15,
+                  fontWeight: FontWeight.bold,
+                  color: MColors.textWhite,
+                ),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                isSw ? 'Vuta chini ili kupakia upya' : 'Pull down to refresh',
+                style: GoogleFonts.manrope(
+                  fontSize: 12,
+                  color: MColors.textWhite.withValues(alpha: 0.6),
+                ),
+              ),
+              const SizedBox(height: 16),
+              ElevatedButton.icon(
+                onPressed: _refreshStandings,
+                icon: const Icon(Icons.refresh_rounded, size: 18),
+                label: Text(
+                  isSw ? 'Pakia Upya' : 'Reload',
+                  style: GoogleFonts.manrope(fontWeight: FontWeight.bold),
+                ),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: MColors.surface,
+                  foregroundColor: MColors.scoresCyan,
+                  side: const BorderSide(color: MColors.scoresCyan),
+                ),
+              ),
+            ],
           ),
-          const SizedBox(height: 6),
-          Text(
-            isSw ? 'Vuta chini ili kupakia upya' : 'Pull down to refresh',
-            style: GoogleFonts.manrope(
-              fontSize: 12,
-              color: MColors.textWhite.withValues(alpha: 0.6),
-            ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildErrorState(Object? error, bool isSw) {
+    final errorMsg = error?.toString() ?? '';
+    final isRateLimit = errorMsg.contains('quota') ||
+        errorMsg.contains('requests per day') ||
+        errorMsg.contains('request limit') ||
+        errorMsg.contains('Too Many Requests');
+
+    return Center(
+      child: SingleChildScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: MColors.surface,
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                    color: isRateLimit
+                        ? Colors.amberAccent.withValues(alpha: 0.4)
+                        : Colors.redAccent.withValues(alpha: 0.4),
+                  ),
+                ),
+                child: Icon(
+                  isRateLimit ? Icons.hourglass_empty_rounded : Icons.cloud_off_rounded,
+                  size: 40,
+                  color: isRateLimit ? Colors.amberAccent : Colors.redAccent,
+                ),
+              ),
+              const SizedBox(height: 16),
+              Text(
+                isRateLimit
+                    ? (isSw ? 'Kikomo cha Maombi ya API Kimefikiwa' : 'API Request Limit Reached')
+                    : (isSw ? 'Hitilafu ya Kupakia Msimamo' : 'Failed to Load Standings'),
+                textAlign: TextAlign.center,
+                style: GoogleFonts.outfit(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: MColors.textWhite,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                isRateLimit
+                    ? (isSw
+                        ? 'Kikomo cha maombi 100/siku ya mpango wa bure wa API-Sports kimefikiwa. Tafadhali jaribu tena baadaye au ongeza ukomo.'
+                        : 'Free tier quota of 100 requests/day on API-Sports reached. Please try again later.')
+                    : (isSw
+                        ? 'Tafadhali kagua muunganisho wako wa intaneti kisha ujaribu tena.'
+                        : 'Please check your internet connection and try again.'),
+                textAlign: TextAlign.center,
+                style: GoogleFonts.manrope(
+                  fontSize: 12.5,
+                  color: MColors.textWhite.withValues(alpha: 0.7),
+                  height: 1.4,
+                ),
+              ),
+              const SizedBox(height: 20),
+              ElevatedButton.icon(
+                onPressed: _refreshStandings,
+                icon: const Icon(Icons.refresh_rounded, size: 18),
+                label: Text(
+                  isSw ? 'Jaribu Tena' : 'Retry',
+                  style: GoogleFonts.manrope(fontWeight: FontWeight.bold),
+                ),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: MColors.scoresCyan,
+                  foregroundColor: MColors.background,
+                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                ),
+              ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }

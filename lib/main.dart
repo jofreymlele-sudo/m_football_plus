@@ -5,6 +5,7 @@ import 'api_service.dart';
 import 'matches_screen.dart';
 import 'standings_screen.dart';
 import 'news_screen.dart';
+import 'insight_hub_screen.dart';
 
 // ============================================================================
 // 0. ENTRY POINT YA FLUTTER (MAIN FUNCTION & APP ROOT)
@@ -55,6 +56,7 @@ class MColors {
   static const Color textWhite = Color(0xFFFFFFFF);  // Rangi ya Maandishi: White
   static const Color scoresCyan = Color(0xFF00FFFF); // Rangi ya Scores / 'VS': Cyan
   static const Color highlightsGold = Color(0xFFFFBF00); // Rangi ya Muda / Kengele: Gold
+  static const Color textMuted = Color(0xFF8892B0);  // Rangi ya Maelezo / Text Muted
 }
 
 // ============================================================================
@@ -100,161 +102,7 @@ class MStrings {
       lang == AppLanguage.swahili ? 'wasomaji' : 'reads';
 }
 
-// ============================================================================
-// 3. DATA MODELS (MatchModel inasomwa moja kwa moja kutoka api_service.dart)
-// ============================================================================
-class NewsModel {
-  final String id;
-  final String titleEn;
-  final String titleSw;
-  final String summaryEn;
-  final String summarySw;
-  final String categoryEn;
-  final String categorySw;
-  final String timeAgoEn;
-  final String timeAgoSw;
-  final String imageUrl;
-  final String author;
-  final int readsCount;
-  final bool isTrending;
 
-  const NewsModel({
-    required this.id,
-    required this.titleEn,
-    required this.titleSw,
-    required this.summaryEn,
-    required this.summarySw,
-    required this.categoryEn,
-    required this.categorySw,
-    required this.timeAgoEn,
-    required this.timeAgoSw,
-    required this.imageUrl,
-    required this.author,
-    required this.readsCount,
-    this.isTrending = false,
-  });
-
-  String getTitle(bool isSwahili) => isSwahili ? titleSw : titleEn;
-  String getSummary(bool isSwahili) => isSwahili ? summarySw : summaryEn;
-  String getCategory(bool isSwahili) => isSwahili ? categorySw : categoryEn;
-  String getTimeAgo(bool isSwahili) => isSwahili ? timeAgoSw : timeAgoEn;
-}
-
-// ============================================================================
-// 4. MOCK DATA REPOSITORY (Habari Pekee - Mechi Zote Zinatoka Moja kwa Moja kwenye API)
-// ============================================================================
-class MockFootballRepository {
-  // Habari Zinazovuma Sana (Top Trending Stories)
-  static final List<NewsModel> trendingStories = [
-    const NewsModel(
-      id: 'tr1',
-      titleEn: 'Kylian Mbappé Fires Real Madrid To Champions League Semi-Finals With Stunner',
-      titleSw: 'Kylian Mbappé Aipeleka Real Madrid Nusu Fainali ya Klabu Bingwa kwa Bao la Kipekee',
-      summaryEn: 'An exhilarating display of sheer pace and clinical finishing silenced the critics.',
-      summarySw: 'Kasi ya ajabu na umaliziaji wa kiwango cha juu uliwazima wakosoaji usiku wa Ulaya.',
-      categoryEn: 'CHAMPIONS LEAGUE',
-      categorySw: 'KLABU BINGWA ULAYA',
-      timeAgoEn: '15m ago',
-      timeAgoSw: 'Dak 15 zilizopita',
-      imageUrl: 'https://images.unsplash.com/photo-1574629810360-7efbbe195018?auto=format&fit=crop&w=1200&q=80',
-      author: 'Tactical Desk',
-      readsCount: 14820,
-      isTrending: true,
-    ),
-    const NewsModel(
-      id: 'tr2',
-      titleEn: 'Kariakoo Derby: 60,000 Fans Roar As Yanga & Simba Share Thrilling Spoils',
-      titleSw: 'Dabi ya Kariakoo: Mashabiki 60,000 Washangilia Yanga na Simba Zikitoshana Nguvu',
-      summaryEn: 'Benjamin Mkapa Stadium shook in one of the most intense derbies in African history.',
-      summarySw: 'Uwanja wa Benjamin Mkapa ulitetemeka katika moja ya dabi kali zaidi barani Afrika.',
-      categoryEn: 'AFRICA ELITE',
-      categorySw: 'SOKA LA AFRIKA',
-      timeAgoEn: '32m ago',
-      timeAgoSw: 'Dak 32 zilizopita',
-      imageUrl: 'https://images.unsplash.com/photo-1508098682722-e99c43a406b2?auto=format&fit=crop&w=1200&q=80',
-      author: 'African Bureau',
-      readsCount: 22450,
-      isTrending: true,
-    ),
-    const NewsModel(
-      id: 'tr3',
-      titleEn: 'Erling Haaland Smashes European Goal Milestone With Supersonic Strike',
-      titleSw: 'Erling Haaland Avunja Rekodi ya Kasi ya Mabao Ulaya kwa Kombora Kali',
-      summaryEn: 'The Norwegian marksman reaches 50 continental goals faster than any player in history.',
-      summarySw: 'Mshambuliaji huyo afikisha mabao 50 Ulaya kwa kasi ambayo haijawahi kushuhudiwa.',
-      categoryEn: 'RECORD BREAKER',
-      categorySw: 'REKODI ZA DUNIA',
-      timeAgoEn: '45m ago',
-      timeAgoSw: 'Dak 45 zilizopita',
-      imageUrl: 'https://images.unsplash.com/photo-1522778119026-d647f0596c20?auto=format&fit=crop&w=1200&q=80',
-      author: 'Stats Lab',
-      readsCount: 18900,
-      isTrending: true,
-    ),
-    const NewsModel(
-      id: 'tr4',
-      titleEn: 'The Tactical Masterclass: How Modern High-Press Dominates European Midfields',
-      titleSw: 'Mapinduzi ya Mbinu: Jinsi Mfumo wa Kushambulia kwa Nguvu Unavyotawala Ulaya',
-      summaryEn: 'In-depth breakdown of spatial control, inverted fullbacks, and rapid counter-pressing.',
-      summarySw: 'Uchambuzi wa kina wa jinsi ya kutawala nafasi na kupiga pasi za haraka za kukaba.',
-      categoryEn: 'TACTICAL HUB',
-      categorySw: 'UCHAMBUZI WA MBINU',
-      timeAgoEn: '1h ago',
-      timeAgoSw: 'Saa 1 lililopita',
-      imageUrl: 'https://images.unsplash.com/photo-1517466787929-bc90951d0974?auto=format&fit=crop&w=1200&q=80',
-      author: 'Pro Analyst',
-      readsCount: 12400,
-      isTrending: true,
-    ),
-    const NewsModel(
-      id: 'tr5',
-      titleEn: 'CAF Confirms 40% Increase In Champions League Prize Money for 2026',
-      titleSw: 'CAF Yathibitisha Nyongeza ya Asilimia 40 ya Zawadi za Klabu Bingwa Afrika 2026',
-      summaryEn: 'Historic funding injection set to boost African club infrastructure and player welfare.',
-      summarySw: 'Uwekezaji wa kihistoria utakaoinua miundombinu ya vilabu vya soka barani Afrika.',
-      categoryEn: 'CAF NEWS',
-      categorySw: 'HABARI ZA CAF',
-      timeAgoEn: '2h ago',
-      timeAgoSw: 'Masaa 2 yaliyopita',
-      imageUrl: 'https://images.unsplash.com/photo-1489944440615-453fc2b6a9a9?auto=format&fit=crop&w=1200&q=80',
-      author: 'Cairo HQ',
-      readsCount: 31200,
-      isTrending: true,
-    ),
-  ];
-
-  // Habari za Hivi Punde (Latest Stories)
-  static final List<NewsModel> latestStories = [
-    const NewsModel(
-      id: 'ls1',
-      titleEn: 'Mikel Arteta Promises High Intensity For North London Derby Showdown',
-      titleSw: 'Mikel Arteta Aahidi Mchezo wa Kasi ya Juu Kuelekea Dabi ya London Kaskazini',
-      summaryEn: 'Arsenal manager confirms key players are fully fit and focused on victory.',
-      summarySw: 'Kocha wa Arsenal athibitisha wachezaji wote muhimu wako fiti kwa ushindi.',
-      categoryEn: 'PREMIER LEAGUE',
-      categorySw: 'LIGI KUU UINGEREZA',
-      timeAgoEn: '8m ago',
-      timeAgoSw: 'Dak 8 zilizopita',
-      imageUrl: 'https://images.unsplash.com/photo-1517466787929-bc90951d0974?auto=format&fit=crop&w=600&q=80',
-      author: 'London Bureau',
-      readsCount: 5410,
-    ),
-    const NewsModel(
-      id: 'ls2',
-      titleEn: 'CAF Confirms 40% Increase In Champions League Prize Money for 2026',
-      titleSw: 'CAF Yathibitisha Nyongeza ya Asilimia 40 ya Zawadi za Klabu Bingwa Afrika 2026',
-      summaryEn: 'Historic funding injection set to boost African club infrastructure.',
-      summarySw: 'Uwekezaji wa kihistoria utakaoinua miundombinu ya vilabu vya soka barani Afrika.',
-      categoryEn: 'CAF NEWS',
-      categorySw: 'HABARI ZA CAF',
-      timeAgoEn: '24m ago',
-      timeAgoSw: 'Dak 24 zilizopita',
-      imageUrl: 'https://images.unsplash.com/photo-1489944440615-453fc2b6a9a9?auto=format&fit=crop&w=600&q=80',
-      author: 'Cairo HQ',
-      readsCount: 11200,
-    ),
-  ];
-}
 
 // ============================================================================
 // 5. NEMBO HALISI (ORIGINAL M FOOTBALL PLUS BRAND LOGO)
@@ -384,40 +232,32 @@ class _MFootballPlusHomePageState extends State<MFootballPlusHomePage> {
   int _trendingPageIndex = 0;
   late PageController _trendingPageController;
 
-  // Orodha ya Mechi (Zinasomwa Live kutoka API Pekee - Hakuna Data za Kutunga)
-  List<MatchModel> _liveMatches = [];
+  // Data Futures kutoka API Moja kwa Moja (Data Halisi Pekee - Hakuna Mock Data)
+  late Future<List<MatchModel>> _liveMatchesFuture;
   late Future<List<MatchModel>> _todaysMatchesFuture;
-  bool _isLoadingLive = false;
-  bool _isApiConnected = false;
+  late Future<List<NewsArticleModel>> _newsArticlesFuture;
 
   @override
   void initState() {
     super.initState();
     _trendingPageController = PageController(viewportFraction: 1.0);
+    _liveMatchesFuture = FootballApiService().getLiveMatches();
     _todaysMatchesFuture = FootballApiService().getTodaysMatches();
-    _loadLiveMatchesFromApi();
+    _newsArticlesFuture = FootballApiService().getFootballNews(category: 'all');
   }
 
-  // Kazi ya kupakia mechi za moja kwa moja (Live Matches) kutoka API
-  Future<void> _loadLiveMatchesFromApi() async {
-    if (!mounted) return;
+  // Kazi ya kusasisha data zote za API
+  Future<void> _refreshAllData() async {
     setState(() {
-      _isLoadingLive = true;
+      _liveMatchesFuture = FootballApiService().getLiveMatches(forceRefresh: true);
       _todaysMatchesFuture = FootballApiService().getTodaysMatches(forceRefresh: true);
+      _newsArticlesFuture = FootballApiService().getFootballNews(category: 'all', forceRefresh: true);
     });
-
-    try {
-      final apiLive = await FootballApiService().getLiveMatches();
-      if (!mounted) return;
-
-      setState(() {
-        _liveMatches = apiLive; // Data halisi pekee kutoka API
-        _isApiConnected = true;
-        _isLoadingLive = false;
-      });
-    } catch (_) {
-      if (mounted) setState(() => _isLoadingLive = false);
-    }
+    await Future.wait([
+      _liveMatchesFuture.catchError((_) => <MatchModel>[]),
+      _todaysMatchesFuture.catchError((_) => <MatchModel>[]),
+      _newsArticlesFuture.catchError((_) => <NewsArticleModel>[]),
+    ]);
   }
 
   @override
@@ -482,6 +322,12 @@ class _MFootballPlusHomePageState extends State<MFootballPlusHomePage> {
       case 3:
         // Ukurasa wa Habari za Soka (NewsScreen)
         return NewsScreen(
+          isSwahili: isSwahili,
+          onBackToHome: () => setState(() => _currentIndex = 0),
+        );
+      case 4:
+        // Ukurasa wa Kituo cha Maarifa (InsightHubScreen)
+        return InsightHubScreen(
           isSwahili: isSwahili,
           onBackToHome: () => setState(() => _currentIndex = 0),
         );
@@ -619,7 +465,7 @@ class _MFootballPlusHomePageState extends State<MFootballPlusHomePage> {
     return RefreshIndicator(
       color: MColors.scoresCyan,
       backgroundColor: MColors.surface,
-      onRefresh: _loadLiveMatchesFromApi,
+      onRefresh: _refreshAllData,
       child: SingleChildScrollView(
         physics: const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
         child: Column(
@@ -686,279 +532,315 @@ class _MFootballPlusHomePageState extends State<MFootballPlusHomePage> {
     );
   }
 
-  // --- 2. Top Trending Story (Kadi Moja Kubwa Pekee - Slide Mara 5 Ndani Yake Bila Kukatwa Pembeni) ---
+  // --- 2. Top Trending Story (Habari Kubwa za API zenye Picha Kamili na Reader Modal) ---
   Widget _buildTopTrendingSection(bool isSwahili) {
-    final stories = MockFootballRepository.trendingStories;
-
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16),
-      child: Column(
-        children: [
-          SizedBox(
-            height: 235,
-            child: Stack(
-              children: [
-                // PageView ya Kadi Moja Kamili (viewportFraction: 1.0 - kadi moja tu bila vipande pembeni)
-                PageView.builder(
-                  clipBehavior: Clip.antiAlias,
-                  padEnds: false,
-                  controller: _trendingPageController,
-                  itemCount: stories.length,
-                  onPageChanged: (index) {
-                    setState(() => _trendingPageIndex = index);
-                  },
-                  itemBuilder: (context, index) {
-                    final story = stories[index];
-                    return Container(
-                      margin: EdgeInsets.zero,
-                      // Kadi Inayoelea yenye Pembe Zilizokatwa (Beveled Cut Corners)
-                      decoration: ShapeDecoration(
-                        shape: BeveledRectangleBorder(
-                          borderRadius: BorderRadius.circular(18),
-                          side: BorderSide(
-                            color: MColors.scoresCyan.withValues(alpha: 0.45),
-                            width: 1.5,
-                          ),
-                        ),
-                        shadows: [
-                          BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.6),
-                            blurRadius: 16,
-                            offset: const Offset(0, 8),
-                          ),
-                          BoxShadow(
-                            color: MColors.scoresCyan.withValues(alpha: 0.08),
-                            blurRadius: 20,
-                            spreadRadius: 1,
-                          ),
-                        ],
-                      ),
-                      clipBehavior: Clip.antiAlias,
-                      child: Stack(
-                        fit: StackFit.expand,
-                        children: [
-                          Image.network(
-                            story.imageUrl,
-                            fit: BoxFit.cover,
-                            errorBuilder: (_, __, ___) => Container(color: MColors.surface),
-                          ),
-                          Container(
-                            decoration: BoxDecoration(
-                              gradient: LinearGradient(
-                                colors: [
-                                  MColors.background.withValues(alpha: 0.1),
-                                  MColors.background.withValues(alpha: 0.82),
-                                  MColors.background.withValues(alpha: 0.98),
-                                ],
-                                stops: const [0.0, 0.45, 0.95],
-                                begin: Alignment.topCenter,
-                                end: Alignment.bottomCenter,
-                              ),
-                            ),
-                          ),
-                          // Badge ya Nambari ya Habari (Mfano: 1 / 5)
-                          Positioned(
-                            top: 12,
-                            left: 14,
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                              decoration: BoxDecoration(
-                                color: Colors.black.withValues(alpha: 0.55),
-                                borderRadius: BorderRadius.circular(8),
-                                border: Border.all(
-                                  color: MColors.scoresCyan.withValues(alpha: 0.4),
-                                  width: 0.8,
-                                ),
-                              ),
-                              child: Text(
-                                '${index + 1} / ${stories.length}',
-                                style: GoogleFonts.manrope(
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.bold,
-                                  color: MColors.scoresCyan,
-                                ),
-                              ),
-                            ),
-                          ),
-                          // Badge ya Kategoria Juu Kulia
-                          Positioned(
-                            top: 0,
-                            right: 0,
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                              decoration: const BoxDecoration(
-                                color: MColors.highlightsGold,
-                                borderRadius: BorderRadius.only(bottomLeft: Radius.circular(12)),
-                              ),
-                              child: Text(
-                                story.getCategory(isSwahili),
-                                style: GoogleFonts.manrope(
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.w800,
-                                  color: MColors.background,
-                                  letterSpacing: 0.5,
-                                ),
-                              ),
-                            ),
-                          ),
-                          Padding(
-                            padding: const EdgeInsets.all(16),
-                            child: Column(
-                              mainAxisAlignment: MainAxisAlignment.end,
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                // Maandishi 'TOP TRENDING STORY' (Manrope, Cyan)
-                                Text(
-                                  MStrings.topTrending(_currentLanguage),
-                                  style: GoogleFonts.manrope(
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.w700,
-                                    color: MColors.scoresCyan, // Cyan
-                                    letterSpacing: 1.2,
-                                  ),
-                                ),
-                                const SizedBox(height: 6),
-                                // Kichwa cha habari (Outfit Bold, White)
-                                Text(
-                                  story.getTitle(isSwahili),
-                                  maxLines: 2,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: GoogleFonts.outfit(
-                                    fontSize: 18,
-                                    fontWeight: FontWeight.bold,
-                                    color: MColors.textWhite, // White
-                                    height: 1.25,
-                                  ),
-                                ),
-                                const SizedBox(height: 8),
-                                // Maelezo ya Muda (Manrope, Gold)
-                                Row(
-                                  children: [
-                                    const Icon(Icons.access_time_filled, size: 12, color: MColors.highlightsGold),
-                                    const SizedBox(width: 4),
-                                    Text(
-                                      story.getTimeAgo(isSwahili),
-                                      style: GoogleFonts.manrope(
-                                        fontSize: 11,
-                                        fontWeight: FontWeight.w500,
-                                        color: MColors.highlightsGold, // Gold
-                                      ),
-                                    ),
-                                    const Spacer(),
-                                    Text(
-                                      '${story.readsCount} ${MStrings.reads(_currentLanguage)}',
-                                      style: GoogleFonts.manrope(
-                                        fontSize: 11,
-                                        fontWeight: FontWeight.w500,
-                                        color: MColors.textWhite.withValues(alpha: 0.6),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
-                    );
-                  },
+    return FutureBuilder<List<NewsArticleModel>>(
+      future: _newsArticlesFuture,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Container(
+              height: 235,
+              decoration: BoxDecoration(
+                color: MColors.surface,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(
+                  color: MColors.scoresCyan.withValues(alpha: 0.15),
                 ),
-                // Vitufe vya Kupita Kushoto / Kulia (Arrows za Kuslide Kirahisi)
-                Positioned(
-                  left: 6,
-                  top: 0,
-                  bottom: 0,
-                  child: Center(
-                    child: _trendingPageIndex > 0
-                        ? InkWell(
-                            onTap: () {
-                              _trendingPageController.previousPage(
-                                duration: const Duration(milliseconds: 300),
-                                curve: Curves.easeInOut,
-                              );
-                            },
-                            child: Container(
-                              padding: const EdgeInsets.all(5),
-                              decoration: BoxDecoration(
-                                shape: BoxShape.circle,
-                                color: Colors.black.withValues(alpha: 0.5),
-                                border: Border.all(color: MColors.scoresCyan.withValues(alpha: 0.5)),
-                              ),
-                              child: const Icon(Icons.chevron_left_rounded, color: MColors.scoresCyan, size: 20),
-                            ),
-                          )
-                        : const SizedBox.shrink(),
-                  ),
-                ),
-                Positioned(
-                  right: 6,
-                  top: 0,
-                  bottom: 0,
-                  child: Center(
-                    child: _trendingPageIndex < stories.length - 1
-                        ? InkWell(
-                            onTap: () {
-                              _trendingPageController.nextPage(
-                                duration: const Duration(milliseconds: 300),
-                                curve: Curves.easeInOut,
-                              );
-                            },
-                            child: Container(
-                              padding: const EdgeInsets.all(5),
-                              decoration: BoxDecoration(
-                                shape: BoxShape.circle,
-                                color: Colors.black.withValues(alpha: 0.5),
-                                border: Border.all(color: MColors.scoresCyan.withValues(alpha: 0.5)),
-                              ),
-                              child: const Icon(Icons.chevron_right_rounded, color: MColors.scoresCyan, size: 20),
-                            ),
-                          )
-                        : const SizedBox.shrink(),
-                  ),
-                ),
-              ],
-            ),
-          ),
-
-          const SizedBox(height: 10),
-
-          // Vipone (Dots) 5 Chini kwa Ajili ya Kuslide na Kubofya
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: List.generate(
-              stories.length,
-              (index) => GestureDetector(
-                onTap: () {
-                  _trendingPageController.animateToPage(
-                    index,
-                    duration: const Duration(milliseconds: 300),
-                    curve: Curves.easeInOut,
-                  );
-                },
-                child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 250),
-                  margin: const EdgeInsets.symmetric(horizontal: 4),
-                  width: _trendingPageIndex == index ? 24 : 7,
-                  height: 5,
-                  decoration: BoxDecoration(
-                    color: _trendingPageIndex == index
-                        ? MColors.scoresCyan // Cyan Dot
-                        : MColors.textWhite.withValues(alpha: 0.25),
-                    borderRadius: BorderRadius.circular(3),
+              ),
+              child: const Center(
+                child: SizedBox(
+                  width: 26,
+                  height: 26,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2.2,
+                    valueColor: AlwaysStoppedAnimation<Color>(MColors.scoresCyan),
                   ),
                 ),
               ),
             ),
+          );
+        }
+
+        final List<NewsArticleModel> stories = (snapshot.hasData && snapshot.data != null)
+            ? snapshot.data!
+            : [];
+
+        if (stories.isEmpty) {
+          return const SizedBox.shrink();
+        }
+
+        return Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          child: Column(
+            children: [
+              SizedBox(
+                height: 235,
+                child: Stack(
+                  children: [
+                    // PageView ya Kadi Moja Kamili (viewportFraction: 1.0)
+                    PageView.builder(
+                      clipBehavior: Clip.antiAlias,
+                      padEnds: false,
+                      controller: _trendingPageController,
+                      itemCount: stories.length,
+                      onPageChanged: (index) {
+                        setState(() => _trendingPageIndex = index);
+                      },
+                      itemBuilder: (context, index) {
+                        final story = stories[index];
+                        return GestureDetector(
+                          onTap: () => showArticleReaderModal(context, story, isSwahili),
+                          child: Container(
+                            margin: EdgeInsets.zero,
+                            decoration: BoxDecoration(
+                              color: MColors.surface,
+                              borderRadius: BorderRadius.circular(16),
+                              border: Border.all(
+                                color: MColors.scoresCyan.withValues(alpha: 0.45),
+                                width: 1.4,
+                              ),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withValues(alpha: 0.6),
+                                  blurRadius: 16,
+                                  offset: const Offset(0, 8),
+                                ),
+                                BoxShadow(
+                                  color: MColors.scoresCyan.withValues(alpha: 0.12),
+                                  blurRadius: 18,
+                                  spreadRadius: 1,
+                                ),
+                              ],
+                            ),
+                            clipBehavior: Clip.antiAlias,
+                            child: Stack(
+                              fit: StackFit.expand,
+                              children: [
+                                Image.network(
+                                  story.imageUrl,
+                                  fit: BoxFit.cover,
+                                  errorBuilder: (_, __, ___) => Container(color: MColors.surface),
+                                ),
+                                Container(
+                                  decoration: BoxDecoration(
+                                    gradient: LinearGradient(
+                                      colors: [
+                                        MColors.background.withValues(alpha: 0.05),
+                                        MColors.background.withValues(alpha: 0.75),
+                                        MColors.background.withValues(alpha: 0.98),
+                                      ],
+                                      stops: const [0.0, 0.42, 0.95],
+                                      begin: Alignment.topCenter,
+                                      end: Alignment.bottomCenter,
+                                    ),
+                                  ),
+                                ),
+                                // Badge ya Nambari ya Habari (Mfano: 1 / 4)
+                                Positioned(
+                                  top: 12,
+                                  left: 14,
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                    decoration: BoxDecoration(
+                                      color: Colors.black.withValues(alpha: 0.55),
+                                      borderRadius: BorderRadius.circular(8),
+                                      border: Border.all(
+                                        color: MColors.scoresCyan.withValues(alpha: 0.4),
+                                        width: 0.8,
+                                      ),
+                                    ),
+                                    child: Text(
+                                      '${index + 1} / ${stories.length}',
+                                      style: GoogleFonts.manrope(
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.bold,
+                                        color: MColors.scoresCyan,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                                // Badge ya Kategoria Juu Kulia
+                                Positioned(
+                                  top: 0,
+                                  right: 0,
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                                    decoration: const BoxDecoration(
+                                      color: MColors.highlightsGold,
+                                      borderRadius: BorderRadius.only(bottomLeft: Radius.circular(12)),
+                                    ),
+                                    child: Text(
+                                      story.category,
+                                      style: GoogleFonts.manrope(
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.w800,
+                                        color: MColors.background,
+                                        letterSpacing: 0.5,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                                Padding(
+                                  padding: const EdgeInsets.all(16),
+                                  child: Column(
+                                    mainAxisAlignment: MainAxisAlignment.end,
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      // Maandishi 'TOP TRENDING STORY' (Manrope, Cyan)
+                                      Text(
+                                        MStrings.topTrending(_currentLanguage),
+                                        style: GoogleFonts.manrope(
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.w700,
+                                          color: MColors.scoresCyan,
+                                          letterSpacing: 1.2,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 6),
+                                      // Kichwa cha habari (Outfit Bold, White)
+                                      Text(
+                                        story.getTitle(isSwahili),
+                                        maxLines: 2,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: GoogleFonts.outfit(
+                                          fontSize: 17,
+                                          fontWeight: FontWeight.bold,
+                                          color: MColors.textWhite,
+                                          height: 1.25,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 8),
+                                      // Maelezo ya Muda (Manrope, Gold)
+                                      Row(
+                                        children: [
+                                          const Icon(Icons.access_time_filled, size: 12, color: MColors.highlightsGold),
+                                          const SizedBox(width: 4),
+                                          Text(
+                                            story.publishedAt,
+                                            style: GoogleFonts.manrope(
+                                              fontSize: 11,
+                                              fontWeight: FontWeight.w500,
+                                              color: MColors.highlightsGold,
+                                            ),
+                                          ),
+                                          const Spacer(),
+                                          Text(
+                                            story.source,
+                                            style: GoogleFonts.manrope(
+                                              fontSize: 11,
+                                              fontWeight: FontWeight.w500,
+                                              color: MColors.textWhite.withValues(alpha: 0.7),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                    // Vitufe vya Kupita Kushoto / Kulia
+                    Positioned(
+                      left: 6,
+                      top: 0,
+                      bottom: 0,
+                      child: Center(
+                        child: _trendingPageIndex > 0
+                            ? InkWell(
+                                onTap: () {
+                                  _trendingPageController.previousPage(
+                                    duration: const Duration(milliseconds: 300),
+                                    curve: Curves.easeInOut,
+                                  );
+                                },
+                                child: Container(
+                                  padding: const EdgeInsets.all(5),
+                                  decoration: BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    color: Colors.black.withValues(alpha: 0.5),
+                                    border: Border.all(color: MColors.scoresCyan.withValues(alpha: 0.5)),
+                                  ),
+                                  child: const Icon(Icons.chevron_left_rounded, color: MColors.scoresCyan, size: 20),
+                                ),
+                              )
+                            : const SizedBox.shrink(),
+                      ),
+                    ),
+                    Positioned(
+                      right: 6,
+                      top: 0,
+                      bottom: 0,
+                      child: Center(
+                        child: _trendingPageIndex < stories.length - 1
+                            ? InkWell(
+                                onTap: () {
+                                  _trendingPageController.nextPage(
+                                    duration: const Duration(milliseconds: 300),
+                                    curve: Curves.easeInOut,
+                                  );
+                                },
+                                child: Container(
+                                  padding: const EdgeInsets.all(5),
+                                  decoration: BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    color: Colors.black.withValues(alpha: 0.5),
+                                    border: Border.all(color: MColors.scoresCyan.withValues(alpha: 0.5)),
+                                  ),
+                                  child: const Icon(Icons.chevron_right_rounded, color: MColors.scoresCyan, size: 20),
+                                ),
+                              )
+                            : const SizedBox.shrink(),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              const SizedBox(height: 10),
+
+              // Vipone (Dots) Chini kwa Ajili ya Kuslide na Kubofya
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: List.generate(
+                  stories.length,
+                  (index) => GestureDetector(
+                    onTap: () {
+                      _trendingPageController.animateToPage(
+                        index,
+                        duration: const Duration(milliseconds: 300),
+                        curve: Curves.easeInOut,
+                      );
+                    },
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 250),
+                      margin: const EdgeInsets.symmetric(horizontal: 4),
+                      width: _trendingPageIndex == index ? 24 : 7,
+                      height: 5,
+                      decoration: BoxDecoration(
+                        color: _trendingPageIndex == index
+                            ? MColors.scoresCyan
+                            : MColors.textWhite.withValues(alpha: 0.25),
+                        borderRadius: BorderRadius.circular(3),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ],
           ),
-        ],
-      ),
+        );
+      },
     );
   }
 
-  // --- 3. Live Matches (Kadi 3 Zilizopangwa Kisafi Zikisoma API Moja kwa Moja) ---
+  // --- 3. Live Matches (FutureBuilder Inayovuta Mechi Mubashara Halisi Moja kwa Moja kutoka API) ---
   Widget _buildLiveMatchesSection(bool isSwahili) {
-    final matches = _liveMatches;
-
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16),
       child: Column(
@@ -990,56 +872,45 @@ class _MFootballPlusHomePageState extends State<MFootballPlusHomePage> {
               ),
               Row(
                 children: [
-                  if (_isLoadingLive)
-                    const Padding(
-                      padding: EdgeInsets.only(right: 8),
-                      child: SizedBox(
-                        width: 14,
-                        height: 14,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          valueColor: AlwaysStoppedAnimation<Color>(MColors.scoresCyan),
+                  InkWell(
+                    onTap: () {
+                      setState(() {
+                        _liveMatchesFuture = FootballApiService().getLiveMatches(forceRefresh: true);
+                      });
+                    },
+                    borderRadius: BorderRadius.circular(10),
+                    child: Container(
+                      margin: const EdgeInsets.only(right: 8),
+                      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: MColors.surface,
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(
+                          color: MColors.scoresCyan.withValues(alpha: 0.6),
+                          width: 0.8,
                         ),
                       ),
-                    )
-                  else
-                    InkWell(
-                      onTap: _loadLiveMatchesFromApi,
-                      borderRadius: BorderRadius.circular(10),
-                      child: Container(
-                        margin: const EdgeInsets.only(right: 8),
-                        padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
-                        decoration: BoxDecoration(
-                          color: MColors.surface,
-                          borderRadius: BorderRadius.circular(10),
-                          border: Border.all(
-                            color: _isApiConnected
-                                ? MColors.scoresCyan.withValues(alpha: 0.6)
-                                : MColors.highlightsGold.withValues(alpha: 0.6),
-                            width: 0.8,
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(
+                            Icons.refresh_rounded,
+                            size: 11,
+                            color: MColors.scoresCyan,
                           ),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(
-                              _isApiConnected ? Icons.wifi : Icons.refresh_rounded,
-                              size: 11,
-                              color: _isApiConnected ? MColors.scoresCyan : MColors.highlightsGold,
+                          const SizedBox(width: 4),
+                          Text(
+                            'SYNC',
+                            style: GoogleFonts.manrope(
+                              fontSize: 9,
+                              fontWeight: FontWeight.bold,
+                              color: MColors.scoresCyan,
                             ),
-                            const SizedBox(width: 4),
-                            Text(
-                              _isApiConnected ? 'API LIVE' : 'SYNC',
-                              style: GoogleFonts.manrope(
-                                fontSize: 9,
-                                fontWeight: FontWeight.bold,
-                                color: _isApiConnected ? MColors.scoresCyan : MColors.highlightsGold,
-                              ),
-                            ),
-                          ],
-                        ),
+                          ),
+                        ],
                       ),
                     ),
+                  ),
                   InkWell(
                     onTap: () => setState(() => _currentIndex = 1),
                     child: Text(
@@ -1058,46 +929,71 @@ class _MFootballPlusHomePageState extends State<MFootballPlusHomePage> {
 
           const SizedBox(height: 12),
 
-          // Ikiwa hakuna mechi mubashara inayochezwa sasa duniani, onyesha ujumbe halisi
-          if (matches.isEmpty)
-            _buildNoLiveMatchesCard(isSwahili)
-          else
-            // Mpangilio wa Kadi: Kwenye Web / Laptop kadi 3 zinakaa sawa kabisa na MECHI ZA LEO
-            LayoutBuilder(
-              builder: (context, constraints) {
-                final count = matches.length;
-                if (constraints.maxWidth >= 700) {
-                  // Kadi 3 kamili zenye nafasi katikati zinazojaza kutoka 16px kushoto hadi 16px kulia
-                  return Row(
-                    children: [
-                      if (count > 0) Expanded(child: _buildLiveMatchCard(matches[0], isSwahili)),
-                      if (count > 1) const SizedBox(width: 14),
-                      if (count > 1) Expanded(child: _buildLiveMatchCard(matches[1], isSwahili)),
-                      if (count > 2) const SizedBox(width: 14),
-                      if (count > 2) Expanded(child: _buildLiveMatchCard(matches[2], isSwahili)),
-                    ],
-                  );
-                } else {
-                  // Kwenye Simu: Kadi 1 inayojaza upana kamili bila kukatwa
-                  return SizedBox(
-                    height: 165,
-                    child: PageView.builder(
-                      controller: PageController(viewportFraction: 1.0),
-                      itemCount: count,
-                      itemBuilder: (context, index) {
-                        return _buildLiveMatchCard(matches[index], isSwahili);
-                      },
-                    ),
-                  );
-                }
-              },
-            ),
+          // FutureBuilder ya Mechi Mubashara Halisi kutoka API
+          FutureBuilder<List<MatchModel>>(
+            future: _liveMatchesFuture,
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return _buildLiveMatchesLoadingPlaceholder(isSwahili);
+              }
+
+              if (snapshot.hasError) {
+                return _buildErrorStateCard(
+                  error: snapshot.error,
+                  onRetry: () {
+                    setState(() {
+                      _liveMatchesFuture = FootballApiService().getLiveMatches(forceRefresh: true);
+                    });
+                  },
+                  isSwahili: isSwahili,
+                  sectionName: isSwahili ? 'Mechi Mubashara' : 'Live Matches',
+                );
+              }
+
+              final matches = snapshot.data ?? [];
+
+              if (matches.isEmpty) {
+                return _buildNoLiveMatchesCard(isSwahili);
+              }
+
+              return LayoutBuilder(
+                builder: (context, constraints) {
+                  final count = matches.length;
+                  if (constraints.maxWidth >= 700) {
+                    return Row(
+                      children: [
+                        if (count > 0) Expanded(child: _buildLiveMatchCard(matches[0], isSwahili)),
+                        if (count > 1) const SizedBox(width: 14),
+                        if (count > 1) Expanded(child: _buildLiveMatchCard(matches[1], isSwahili)),
+                        if (count > 2) const SizedBox(width: 14),
+                        if (count > 2) Expanded(child: _buildLiveMatchCard(matches[2], isSwahili)),
+                      ],
+                    );
+                  } else {
+                    return SizedBox(
+                      height: 165,
+                      child: PageView.builder(
+                        controller: PageController(viewportFraction: 1.0),
+                        itemCount: count,
+                        itemBuilder: (context, index) {
+                          return _buildLiveMatchCard(matches[index], isSwahili);
+                        },
+                      ),
+                    );
+                  }
+                },
+              );
+            },
+          ),
         ],
       ),
     );
   }
 
   Widget _buildLiveMatchCard(MatchModel match, bool isSwahili) {
+    final effectiveHomeLogo = FootballApiService.getTeamLogo(match.homeTeam, fallbackUrl: match.homeTeamLogo);
+    final effectiveAwayLogo = FootballApiService.getTeamLogo(match.awayTeam, fallbackUrl: match.awayTeamLogo);
+
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
@@ -1202,10 +1098,10 @@ class _MFootballPlusHomePageState extends State<MFootballPlusHomePage> {
                           width: 1,
                         ),
                       ),
-                      child: match.homeTeamLogo.isNotEmpty
+                      child: effectiveHomeLogo.isNotEmpty
                           ? ClipOval(
                               child: Image.network(
-                                match.homeTeamLogo,
+                                effectiveHomeLogo,
                                 width: 17,
                                 height: 17,
                                 fit: BoxFit.contain,
@@ -1288,10 +1184,10 @@ class _MFootballPlusHomePageState extends State<MFootballPlusHomePage> {
                           width: 1,
                         ),
                       ),
-                      child: match.awayTeamLogo.isNotEmpty
+                      child: effectiveAwayLogo.isNotEmpty
                           ? ClipOval(
                               child: Image.network(
-                                match.awayTeamLogo,
+                                effectiveAwayLogo,
                                 width: 17,
                                 height: 17,
                                 fit: BoxFit.contain,
@@ -1474,6 +1370,19 @@ class _MFootballPlusHomePageState extends State<MFootballPlusHomePage> {
                 return _buildTodaysMatchesLoadingPlaceholder();
               }
 
+              if (snapshot.hasError) {
+                return _buildErrorStateCard(
+                  error: snapshot.error,
+                  onRetry: () {
+                    setState(() {
+                      _todaysMatchesFuture = FootballApiService().getTodaysMatches(forceRefresh: true);
+                    });
+                  },
+                  isSwahili: isSwahili,
+                  sectionName: isSwahili ? 'Mechi za Leo' : 'Today\'s Matches',
+                );
+              }
+
               // Pata orodha ya mechi kutoka API (Data Halisi Pekee)
               final List<MatchModel> rawMatches =
                   (snapshot.hasData && snapshot.data != null) ? snapshot.data! : [];
@@ -1573,8 +1482,171 @@ class _MFootballPlusHomePageState extends State<MFootballPlusHomePage> {
     );
   }
 
+  // Loading Indicator ya Mechi Mubashara (Live Matches)
+  Widget _buildLiveMatchesLoadingPlaceholder(bool isSwahili) {
+    return Container(
+      height: 140,
+      decoration: BoxDecoration(
+        color: MColors.surface,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: MColors.scoresCyan.withValues(alpha: 0.18),
+        ),
+      ),
+      child: Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const SizedBox(
+              width: 26,
+              height: 26,
+              child: CircularProgressIndicator(
+                strokeWidth: 2.2,
+                valueColor: AlwaysStoppedAnimation<Color>(MColors.scoresCyan),
+              ),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              isSwahili ? 'Inatafuta mechi mubashara kutoka API...' : 'Searching live matches from API...',
+              style: GoogleFonts.manrope(
+                fontSize: 12,
+                color: MColors.textMuted,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // Kadi Maalum ya Kuonyesha Ujumbe wa Kosa la API (Rate Limit au Mtandao) na Kitufe cha Kujaribu Tena
+  Widget _buildErrorStateCard({
+    required Object? error,
+    required VoidCallback onRetry,
+    required bool isSwahili,
+    String? sectionName,
+  }) {
+    final rawError = error?.toString() ?? '';
+    final isRateLimit = rawError.toLowerCase().contains('request limit') ||
+        rawError.toLowerCase().contains('rate limit');
+
+    final String title = isRateLimit
+        ? (isSwahili ? 'Kiwango cha API Kimefikiwa' : 'API Rate Limit Reached')
+        : (isSwahili ? 'Hitilafu ya Muunganisho' : 'Connection Notice');
+
+    final String message = isRateLimit
+        ? (isSwahili
+            ? 'Kiwango cha bure cha maombi ya API ya leo (100/100) kimefikiwa. Tafadhali subiri kianze upya au boresha mpango kwenye api-football.com.'
+            : 'Free daily API limit (100/100 requests) reached. Please wait for the daily quota reset or upgrade on api-football.com.')
+        : (isSwahili
+            ? 'Imeshindwa kupakia ${sectionName ?? "mechi"}. Tafadhali hakikisha mtandao wako uko sawa na ujaribu tena.'
+            : 'Failed to load ${sectionName ?? "fixtures"}. Please verify your connection and try again.');
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+      decoration: BoxDecoration(
+        color: MColors.surface,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(
+          color: isRateLimit
+              ? MColors.highlightsGold.withValues(alpha: 0.4)
+              : Colors.redAccent.withValues(alpha: 0.4),
+          width: 1,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: (isRateLimit ? MColors.highlightsGold : Colors.redAccent)
+                      .withValues(alpha: 0.12),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  isRateLimit ? Icons.info_outline_rounded : Icons.wifi_off_rounded,
+                  size: 20,
+                  color: isRateLimit ? MColors.highlightsGold : Colors.redAccent,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: GoogleFonts.outfit(
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                        color: MColors.textWhite,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      message,
+                      style: GoogleFonts.manrope(
+                        fontSize: 11,
+                        color: MColors.textMuted,
+                        height: 1.35,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Align(
+            alignment: Alignment.centerRight,
+            child: InkWell(
+              onTap: onRetry,
+              borderRadius: BorderRadius.circular(8),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                decoration: BoxDecoration(
+                  color: MColors.scoresCyan.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(
+                    color: MColors.scoresCyan.withValues(alpha: 0.4),
+                    width: 0.8,
+                  ),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(
+                      Icons.refresh_rounded,
+                      size: 13,
+                      color: MColors.scoresCyan,
+                    ),
+                    const SizedBox(width: 6),
+                    Text(
+                      isSwahili ? 'Jaribu Tena' : 'Retry',
+                      style: GoogleFonts.manrope(
+                        fontSize: 11,
+                        fontWeight: FontWeight.bold,
+                        color: MColors.scoresCyan,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   // Kadi ya Mechi Moja ya Leo (Yenye Nembo Mbili, Majina Yasiyojikata Sana na Muda wa Gold)
   Widget _buildTodayMatchTile(MatchModel match, bool isSwahili) {
+    final effectiveHomeLogo = FootballApiService.getTeamLogo(match.homeTeam, fallbackUrl: match.homeTeamLogo);
+    final effectiveAwayLogo = FootballApiService.getTeamLogo(match.awayTeam, fallbackUrl: match.awayTeamLogo);
+
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
       child: Column(
@@ -1623,9 +1695,9 @@ class _MFootballPlusHomePageState extends State<MFootballPlusHomePage> {
                   ),
                 ),
                 clipBehavior: Clip.antiAlias,
-                child: match.homeTeamLogo.isNotEmpty
+                child: effectiveHomeLogo.isNotEmpty
                     ? Image.network(
-                        match.homeTeamLogo,
+                        effectiveHomeLogo,
                         fit: BoxFit.contain,
                         errorBuilder: (_, __, ___) => const Icon(
                           Icons.sports_soccer,
@@ -1708,9 +1780,9 @@ class _MFootballPlusHomePageState extends State<MFootballPlusHomePage> {
                   ),
                 ),
                 clipBehavior: Clip.antiAlias,
-                child: match.awayTeamLogo.isNotEmpty
+                child: effectiveAwayLogo.isNotEmpty
                     ? Image.network(
-                        match.awayTeamLogo,
+                        effectiveAwayLogo,
                         fit: BoxFit.contain,
                         errorBuilder: (_, __, ___) => const Icon(
                           Icons.sports_soccer,
@@ -1751,142 +1823,190 @@ class _MFootballPlusHomePageState extends State<MFootballPlusHomePage> {
 
   // --- 5. Latest Stories ---
   Widget _buildLatestStoriesSection(bool isSwahili) {
-    final stories = MockFootballRepository.latestStories;
+    return FutureBuilder<List<NewsArticleModel>>(
+      future: _newsArticlesFuture,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Padding(
+            padding: EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+            child: Center(
+              child: SizedBox(
+                width: 22,
+                height: 22,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  valueColor: AlwaysStoppedAnimation<Color>(MColors.scoresCyan),
+                ),
+              ),
+            ),
+          );
+        }
 
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        final List<NewsArticleModel> allStories = (snapshot.hasData && snapshot.data != null)
+            ? snapshot.data!
+            : [];
+
+        if (allStories.isEmpty) {
+          return const SizedBox.shrink();
+        }
+
+        final stories = allStories.length > 1 ? allStories.sublist(1) : allStories;
+
+        return Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Container(
-                    width: 4,
-                    height: 16,
-                    decoration: BoxDecoration(
-                      color: MColors.scoresCyan,
-                      borderRadius: BorderRadius.circular(2),
-                    ),
+                  Row(
+                    children: [
+                      Container(
+                        width: 4,
+                        height: 16,
+                        decoration: BoxDecoration(
+                          color: MColors.scoresCyan,
+                          borderRadius: BorderRadius.circular(2),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        MStrings.latestStories(_currentLanguage),
+                        style: GoogleFonts.outfit(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: MColors.textWhite,
+                        ),
+                      ),
+                    ],
                   ),
-                  const SizedBox(width: 8),
-                  Text(
-                    MStrings.latestStories(_currentLanguage),
-                    style: GoogleFonts.outfit(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      color: MColors.textWhite,
+                  GestureDetector(
+                    onTap: () {
+                      setState(() {
+                        _currentIndex = 3; // Nenda kwenye tab ya Habari
+                      });
+                    },
+                    child: Text(
+                      MStrings.viewAll(_currentLanguage),
+                      style: GoogleFonts.manrope(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: MColors.highlightsGold,
+                      ),
                     ),
                   ),
                 ],
               ),
-              Text(
-                MStrings.viewAll(_currentLanguage),
-                style: GoogleFonts.manrope(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                  color: MColors.highlightsGold,
-                ),
-              ),
-            ],
-          ),
 
-          const SizedBox(height: 12),
+              const SizedBox(height: 12),
 
-          // ListView.builder ya Latest Stories
-          ListView.builder(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            itemCount: stories.length,
-            itemBuilder: (context, index) {
-              final story = stories[index];
-              return Container(
-                margin: const EdgeInsets.only(bottom: 10),
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  color: MColors.surface,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(
-                    color: MColors.scoresCyan.withValues(alpha: 0.15),
-                  ),
-                ),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Picha ndogo kushoto
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(8),
-                      child: Image.network(
-                        story.imageUrl,
-                        width: 90,
-                        height: 75,
-                        fit: BoxFit.cover,
-                        errorBuilder: (_, __, ___) => Container(
-                          width: 90,
-                          height: 75,
-                          color: MColors.background,
-                          child: const Icon(Icons.sports_soccer, color: MColors.scoresCyan),
+              // ListView ya Latest Stories zenye Reader Modal
+              ListView.builder(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                itemCount: stories.length,
+                itemBuilder: (context, index) {
+                  final story = stories[index];
+                  return GestureDetector(
+                    onTap: () => showArticleReaderModal(context, story, isSwahili),
+                    child: Container(
+                      margin: const EdgeInsets.only(bottom: 10),
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: MColors.surface,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: MColors.scoresCyan.withValues(alpha: 0.15),
                         ),
                       ),
-                    ),
-                    const SizedBox(width: 12),
-
-                    // Kichwa cha habari (Outfit Bold) kulia
-                    Expanded(
-                      child: Column(
+                      child: Row(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(
-                            story.getTitle(isSwahili),
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                            style: GoogleFonts.outfit(
-                              fontSize: 13,
-                              fontWeight: FontWeight.bold,
-                              color: MColors.textWhite, // Outfit Bold, White
-                              height: 1.25,
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                          // Maelezo ya habari (Manrope)
-                          Text(
-                            story.getSummary(isSwahili),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: GoogleFonts.manrope(
-                              fontSize: 11,
-                              fontWeight: FontWeight.w500,
-                              color: MColors.textWhite.withValues(alpha: 0.6),
-                            ),
-                          ),
-                          const SizedBox(height: 6),
-                          // Muda (Manrope, Gold)
-                          Row(
-                            children: [
-                              const Icon(Icons.schedule, size: 11, color: MColors.highlightsGold),
-                              const SizedBox(width: 4),
-                              Text(
-                                story.getTimeAgo(isSwahili),
-                                style: GoogleFonts.manrope(
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.w500,
-                                  color: MColors.highlightsGold, // Gold
-                                ),
+                          // Picha ndogo kushoto
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(8),
+                            child: Image.network(
+                              story.imageUrl,
+                              width: 90,
+                              height: 75,
+                              fit: BoxFit.cover,
+                              errorBuilder: (_, __, ___) => Container(
+                                width: 90,
+                                height: 75,
+                                color: MColors.background,
+                                child: const Icon(Icons.newspaper_rounded, color: MColors.scoresCyan),
                               ),
-                            ],
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+
+                          // Kichwa cha habari (Outfit Bold) kulia
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  story.getTitle(isSwahili),
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: GoogleFonts.outfit(
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.bold,
+                                    color: MColors.textWhite,
+                                    height: 1.25,
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                // Maelezo ya habari (Manrope)
+                                Text(
+                                  story.getDescription(isSwahili),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: GoogleFonts.manrope(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w500,
+                                    color: MColors.textWhite.withValues(alpha: 0.6),
+                                  ),
+                                ),
+                                const SizedBox(height: 6),
+                                // Muda (Manrope, Gold)
+                                Row(
+                                  children: [
+                                    const Icon(Icons.schedule, size: 11, color: MColors.highlightsGold),
+                                    const SizedBox(width: 4),
+                                    Text(
+                                      story.publishedAt,
+                                      style: GoogleFonts.manrope(
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.w500,
+                                        color: MColors.highlightsGold,
+                                      ),
+                                    ),
+                                    const Spacer(),
+                                    Text(
+                                      story.source,
+                                      style: GoogleFonts.manrope(
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.w500,
+                                        color: MColors.textWhite.withValues(alpha: 0.5),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
                           ),
                         ],
                       ),
                     ),
-                  ],
-                ),
-              );
-            },
+                  );
+                },
+              ),
+            ],
           ),
-        ],
-      ),
+        );
+      },
     );
   }
 
