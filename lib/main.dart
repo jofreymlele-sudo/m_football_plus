@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'api_service.dart';
+import 'matches_screen.dart';
 
 // ============================================================================
 // 0. ENTRY POINT YA FLUTTER (MAIN FUNCTION & APP ROOT)
@@ -486,8 +487,8 @@ class _MFootballPlusHomePageState extends State<MFootballPlusHomePage> {
   int _trendingPageIndex = 0;
   late PageController _trendingPageController;
 
-  // Orodha ya Mechi (Zinasomwa Live kutoka API-Football / RapidAPI & TheSportsDB)
-  List<MatchModel> _liveMatches = MockFootballRepository.liveMatches;
+  // Orodha ya Mechi (Zinasomwa Live kutoka API Pekee - Hakuna Data za Kutunga)
+  List<MatchModel> _liveMatches = [];
   late Future<List<MatchModel>> _todaysMatchesFuture;
   bool _isLoadingLive = false;
   bool _isApiConnected = false;
@@ -512,15 +513,11 @@ class _MFootballPlusHomePageState extends State<MFootballPlusHomePage> {
       final apiLive = await FootballApiService().getLiveMatches();
       if (!mounted) return;
 
-      if (apiLive.isNotEmpty) {
-        setState(() {
-          _liveMatches = apiLive;
-          _isApiConnected = true;
-          _isLoadingLive = false;
-        });
-      } else {
-        setState(() => _isLoadingLive = false);
-      }
+      setState(() {
+        _liveMatches = apiLive; // Data halisi pekee kutoka API
+        _isApiConnected = true;
+        _isLoadingLive = false;
+      });
     } catch (_) {
       if (mounted) setState(() => _isLoadingLive = false);
     }
@@ -560,14 +557,28 @@ class _MFootballPlusHomePageState extends State<MFootballPlusHomePage> {
       // 1. APPBAR
       appBar: _buildAppBar(context, isSwahili),
 
-      // Mwili wa Home Page
-      body: _currentIndex == 0
-          ? _buildHomeFeed(context, isSwahili)
-          : _buildSecondaryTab(context, isSwahili),
+      // Mwili wa App kulingana na Tab iliyochaguliwa (Bottom Navigation)
+      body: _buildCurrentScreen(context, isSwahili),
 
       // 5. BOTTOM NAVIGATION: Menyu 5 zenye currentIndex
       bottomNavigationBar: _buildBottomNav(context, isSwahili),
     );
+  }
+
+  // --- Router ya Skrini Kuu kulingana na Menyu ya Chini ---
+  Widget _buildCurrentScreen(BuildContext context, bool isSwahili) {
+    switch (_currentIndex) {
+      case 0:
+        return _buildHomeFeed(context, isSwahili);
+      case 1:
+        // Ukurasa kamili wa Mechi za Leo na Zinazofuata (MatchesScreen)
+        return MatchesScreen(
+          isSwahili: isSwahili,
+          onBackToHome: () => setState(() => _currentIndex = 0),
+        );
+      default:
+        return _buildSecondaryTab(context, isSwahili);
+    }
   }
 
   // --- AppBar yenye M FOOTBALL PLUS, Profile, Kengele ya Gold, na Switcher ---
@@ -1120,12 +1131,15 @@ class _MFootballPlusHomePageState extends State<MFootballPlusHomePage> {
                         ),
                       ),
                     ),
-                  Text(
-                    MStrings.viewAll(_currentLanguage),
-                    style: GoogleFonts.manrope(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                      color: MColors.highlightsGold,
+                  InkWell(
+                    onTap: () => setState(() => _currentIndex = 1),
+                    child: Text(
+                      MStrings.viewAll(_currentLanguage),
+                      style: GoogleFonts.manrope(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: MColors.highlightsGold,
+                      ),
                     ),
                   ),
                 ],
@@ -1135,36 +1149,40 @@ class _MFootballPlusHomePageState extends State<MFootballPlusHomePage> {
 
           const SizedBox(height: 12),
 
-          // Mpangilio wa Kadi: Kwenye Web / Laptop kadi 3 zinakaa sawa kabisa na MECHI ZA LEO
-          LayoutBuilder(
-            builder: (context, constraints) {
-              final count = matches.length;
-              if (constraints.maxWidth >= 700) {
-                // Kadi 3 kamili zenye nafasi katikati zinazojaza kutoka 16px kushoto hadi 16px kulia
-                return Row(
-                  children: [
-                    if (count > 0) Expanded(child: _buildLiveMatchCard(matches[0], isSwahili)),
-                    if (count > 1) const SizedBox(width: 14),
-                    if (count > 1) Expanded(child: _buildLiveMatchCard(matches[1], isSwahili)),
-                    if (count > 2) const SizedBox(width: 14),
-                    if (count > 2) Expanded(child: _buildLiveMatchCard(matches[2], isSwahili)),
-                  ],
-                );
-              } else {
-                // Kwenye Simu: Kadi 1 inayojaza upana kamili bila kukatwa
-                return SizedBox(
-                  height: 165,
-                  child: PageView.builder(
-                    controller: PageController(viewportFraction: 1.0),
-                    itemCount: count,
-                    itemBuilder: (context, index) {
-                      return _buildLiveMatchCard(matches[index], isSwahili);
-                    },
-                  ),
-                );
-              }
-            },
-          ),
+          // Ikiwa hakuna mechi mubashara inayochezwa sasa duniani, onyesha ujumbe halisi
+          if (matches.isEmpty)
+            _buildNoLiveMatchesCard(isSwahili)
+          else
+            // Mpangilio wa Kadi: Kwenye Web / Laptop kadi 3 zinakaa sawa kabisa na MECHI ZA LEO
+            LayoutBuilder(
+              builder: (context, constraints) {
+                final count = matches.length;
+                if (constraints.maxWidth >= 700) {
+                  // Kadi 3 kamili zenye nafasi katikati zinazojaza kutoka 16px kushoto hadi 16px kulia
+                  return Row(
+                    children: [
+                      if (count > 0) Expanded(child: _buildLiveMatchCard(matches[0], isSwahili)),
+                      if (count > 1) const SizedBox(width: 14),
+                      if (count > 1) Expanded(child: _buildLiveMatchCard(matches[1], isSwahili)),
+                      if (count > 2) const SizedBox(width: 14),
+                      if (count > 2) Expanded(child: _buildLiveMatchCard(matches[2], isSwahili)),
+                    ],
+                  );
+                } else {
+                  // Kwenye Simu: Kadi 1 inayojaza upana kamili bila kukatwa
+                  return SizedBox(
+                    height: 165,
+                    child: PageView.builder(
+                      controller: PageController(viewportFraction: 1.0),
+                      itemCount: count,
+                      itemBuilder: (context, index) {
+                        return _buildLiveMatchCard(matches[index], isSwahili);
+                      },
+                    ),
+                  );
+                }
+              },
+            ),
         ],
       ),
     );
@@ -1426,6 +1444,68 @@ class _MFootballPlusHomePageState extends State<MFootballPlusHomePage> {
     );
   }
 
+  // Kadi ya taarifa sahihi pale ambapo hakuna mechi yoyote mubashara inayochezwa duniani
+  Widget _buildNoLiveMatchesCard(bool isSwahili) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
+      decoration: BoxDecoration(
+        color: MColors.surface,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(
+          color: MColors.scoresCyan.withValues(alpha: 0.2),
+          width: 1,
+        ),
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: MColors.background,
+              border: Border.all(
+                color: MColors.scoresCyan.withValues(alpha: 0.4),
+                width: 1,
+              ),
+            ),
+            child: const Icon(
+              Icons.sensors_off_rounded,
+              size: 22,
+              color: MColors.scoresCyan,
+            ),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  isSwahili ? 'Hakuna Mechi Mubashara Sasa Hivi' : 'No In-Play Matches Currently',
+                  style: GoogleFonts.outfit(
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
+                    color: MColors.textWhite,
+                  ),
+                ),
+                const SizedBox(height: 3),
+                Text(
+                  isSwahili
+                      ? 'Mechi zote zinazoanza duniani zitaonekana hapa moja kwa moja. Angalia ratiba ya leo hapa chini.'
+                      : 'Live fixtures will stream here in real-time once matches kick off. Check today\'s schedule below.',
+                  style: GoogleFonts.manrope(
+                    fontSize: 11,
+                    color: MColors.textWhite.withValues(alpha: 0.65),
+                    height: 1.3,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   // --- 4. Today's Matches (FutureBuilder Inayovuta Mechi za Leo Moja kwa Moja kutoka API) ---
   Widget _buildTodaysMatchesSection(bool isSwahili) {
     return Padding(
@@ -1460,7 +1540,7 @@ class _MFootballPlusHomePageState extends State<MFootballPlusHomePage> {
               InkWell(
                 onTap: () {
                   setState(() {
-                    _todaysMatchesFuture = FootballApiService().getTodaysMatches(forceRefresh: true);
+                    _currentIndex = 1;
                   });
                 },
                 child: Text(
@@ -1485,13 +1565,15 @@ class _MFootballPlusHomePageState extends State<MFootballPlusHomePage> {
                 return _buildTodaysMatchesLoadingPlaceholder();
               }
 
-              // Pata orodha ya mechi kutoka API, au tumia Mock kama Backup
+              // Pata orodha ya mechi kutoka API (Data Halisi Pekee)
               final List<MatchModel> rawMatches =
-                  (snapshot.hasData && snapshot.data != null && snapshot.data!.isNotEmpty)
-                      ? snapshot.data!
-                      : MockFootballRepository.todaysMatches;
+                  (snapshot.hasData && snapshot.data != null) ? snapshot.data! : [];
 
-              // Chukua mechi 8 za juu ili ukurasa uwe safi na usijaze nafasi sana
+              if (rawMatches.isEmpty) {
+                return _buildTodaysMatchesEmptyCard(isSwahili);
+              }
+
+              // Chukua mechi 8 za juu zilizopangwa kwa vigezo rasmi
               final matches = rawMatches.take(8).toList();
 
               return Container(
@@ -1545,6 +1627,38 @@ class _MFootballPlusHomePageState extends State<MFootballPlusHomePage> {
             strokeWidth: 2.2,
             valueColor: AlwaysStoppedAnimation<Color>(MColors.scoresCyan),
           ),
+        ),
+      ),
+    );
+  }
+
+  // Kadi ya kuonyesha pale ambapo hakuna mechi zilizopangwa leo
+  Widget _buildTodaysMatchesEmptyCard(bool isSwahili) {
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 16),
+      decoration: BoxDecoration(
+        color: MColors.surface,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: MColors.scoresCyan.withValues(alpha: 0.18)),
+      ),
+      child: Center(
+        child: Column(
+          children: [
+            Icon(
+              Icons.event_busy_outlined,
+              size: 28,
+              color: MColors.scoresCyan.withValues(alpha: 0.7),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              isSwahili ? 'Hakuna Mechi Zilizopangwa Leo' : 'No Scheduled Fixtures Today',
+              style: GoogleFonts.outfit(
+                fontSize: 14,
+                fontWeight: FontWeight.bold,
+                color: MColors.textWhite,
+              ),
+            ),
+          ],
         ),
       ),
     );

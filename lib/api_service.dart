@@ -1,5 +1,4 @@
 import 'dart:convert';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 
@@ -113,14 +112,10 @@ class FootballApiService {
             .map((item) => MatchModel.fromApiFootballJson(item as Map<String, dynamic>))
             .toList();
 
-        // Panga kwa kuweka ligi maarufu juu
+        // Panga kwa kuweka ligi kuu na mashindano makubwa juu kwanza
         allMatches.sort((a, b) {
-          final priorityLeagues = [
-            'Premier League', 'Champions League', 'La Liga', 'Serie A',
-            'Bundesliga', 'Ligue 1', 'CAF', 'NBC Premier League'
-          ];
-          final aPri = priorityLeagues.any((l) => a.leagueEn.contains(l)) ? 0 : 1;
-          final bPri = priorityLeagues.any((l) => b.leagueEn.contains(l)) ? 0 : 1;
+          final aPri = MatchModel.getLeaguePriority(a.leagueEn, a.leagueCountry);
+          final bPri = MatchModel.getLeaguePriority(b.leagueEn, b.leagueCountry);
           return aPri.compareTo(bPri);
         });
 
@@ -138,6 +133,67 @@ class FootballApiService {
     } catch (e) {
       debugPrint('[M FOOTBALL PLUS API Exception] Mechi za Leo zimefeli: $e');
       return _cachedTodaysMatches ?? [];
+    }
+  }
+
+  // Cache ya ndani ya mechi zinazofuata (Upcoming Matches)
+  List<MatchModel>? _cachedUpcomingMatches;
+  DateTime? _lastUpcomingFetch;
+
+  // --------------------------------------------------------------------------
+  // B2. KUCHUKUA MECHI ZINAZOFUATA (UPCOMING MATCHES) KUTOKA API-FOOTBALL
+  // --------------------------------------------------------------------------
+  /// Inachukua mechi halisi zinazofuata (za kesho) kupitia date endpoint inayofanya kazi 100% bure
+  Future<List<MatchModel>> getUpcomingMatches({bool forceRefresh = false}) async {
+    final now = DateTime.now();
+
+    // Tumia cache ikiwa haijazidi dakika 10
+    if (!forceRefresh &&
+        _cachedUpcomingMatches != null &&
+        _lastUpcomingFetch != null &&
+        now.difference(_lastUpcomingFetch!).inMinutes < 10) {
+      return _cachedUpcomingMatches!;
+    }
+
+    // Pata tarehe ya kesho (YYYY-MM-DD)
+    final tomorrow = now.add(const Duration(days: 1));
+    final tomorrowDate =
+        "${tomorrow.year}-${tomorrow.month.toString().padLeft(2, '0')}-${tomorrow.day.toString().padLeft(2, '0')}";
+
+    final uri = Uri.parse('$_apiFootballBaseUrl/fixtures?date=$tomorrowDate');
+
+    try {
+      debugPrint('[M FOOTBALL PLUS API] Inavuta Mechi Zinazofuata Kesho ($tomorrowDate): $uri');
+
+      final response = await http
+          .get(uri, headers: _apiFootballHeaders)
+          .timeout(const Duration(seconds: 12));
+
+      if (response.statusCode == 200) {
+        final Map<String, dynamic> data = json.decode(response.body);
+        final List<dynamic> responseList = data['response'] ?? [];
+
+        final allMatches = responseList
+            .map((item) => MatchModel.fromApiFootballJson(item as Map<String, dynamic>))
+            .toList();
+
+        // Panga kwa ligi maarufu juu kwanza
+        allMatches.sort((a, b) {
+          final aPri = MatchModel.getLeaguePriority(a.leagueEn, a.leagueCountry);
+          final bPri = MatchModel.getLeaguePriority(b.leagueEn, b.leagueCountry);
+          return aPri.compareTo(bPri);
+        });
+
+        _cachedUpcomingMatches = allMatches;
+        _lastUpcomingFetch = now;
+        return allMatches;
+      } else {
+        debugPrint('[M FOOTBALL PLUS API Error] Mechi Zinazofuata HTTP ${response.statusCode}: ${response.body}');
+        return _cachedUpcomingMatches ?? [];
+      }
+    } catch (e) {
+      debugPrint('[M FOOTBALL PLUS API Exception] Mechi Zinazofuata zimefeli: $e');
+      return _cachedUpcomingMatches ?? [];
     }
   }
 
@@ -359,7 +415,60 @@ class MatchModel {
     );
   }
 
-  // --- Helpers za Tafsiri ya Kiswahili ---
+  // --- Kipaumbele cha Ligi (Ili mechi maarufu zikae juu daima) ---
+  static int getLeaguePriority(String leagueName, String? country) {
+    final n = leagueName.toLowerCase();
+    final c = (country ?? '').toLowerCase();
+
+    // 1. Mashindano makubwa ya kimataifa na Ligi Kuu za Daraja la Kwanza
+    if ((n.contains('champions league') && !n.contains('women')) ||
+        (n == 'premier league' && c == 'england') ||
+        (n.contains('la liga') && c == 'spain' && !n.contains('2')) ||
+        (n.contains('serie a') && c == 'italy') ||
+        (n.contains('bundesliga') && c == 'germany') ||
+        (n.contains('ligue 1') && c == 'france')) {
+      return 1;
+    }
+
+    // 2. Mashindano ya Afrika na Tanzania (CAF & NBC)
+    if (n.contains('caf') || n.contains('nbc') || c == 'tanzania' || n.contains('shirikisho')) {
+      return 2;
+    }
+
+    // 3. Makombe makuu ya nchi (Copa del Rey, FA Cup, n.k.)
+    if (n.contains('copa del rey') ||
+        n == 'fa cup' ||
+        n.contains('dfb pokal') ||
+        n.contains('coppa italia') ||
+        n.contains('europa league') ||
+        n.contains('conference league')) {
+      return 3;
+    }
+
+    // 4. Champions League ya Wanawake na mashindano ya nchi mashuhuri
+    if (n.contains('women') && n.contains('champions league')) {
+      return 4;
+    }
+
+    // 5. Ligi Kuu za Nchi za Afrika (Linafoot Congo, Algeria, Nigeria, Misri, n.k.)
+    if (c.contains('congo') || c == 'algeria' || c == 'egypt' || c == 'nigeria' || c == 'morocco' || c == 'south-africa') {
+      return 5;
+    }
+
+    // 6. Makombe ya ziada ya Uingereza na Hispania (EFL Trophy, Carabao Cup)
+    if (n.contains('efl trophy') || n.contains('cup') || n.contains('trophy')) {
+      return 6;
+    }
+
+    // 7. Ligi nyingine za Marekani Kusini na Ulaya
+    if (c == 'england' || c == 'spain' || c == 'italy' || c == 'brazil' || c == 'argentina') {
+      return 7;
+    }
+
+    return 10;
+  }
+
+  // --- Helpers za Tafsiri ya Kiswahili ya Hali ya Mechi ---
   static String _translateStatusToSwahili(String short, String long, int? elapsed) {
     switch (short) {
       case '1H':
@@ -375,7 +484,7 @@ class MatchModel {
       case 'FT':
         return 'Mchezo Umekwisha';
       case 'AET':
-        return 'Mwisho Baada ya Nyongeza';
+        return 'Mwisho (Nyongeza)';
       case 'PEN':
         return 'Mwisho kwa Penati';
       case 'NS':
@@ -386,7 +495,38 @@ class MatchModel {
         return 'Imefutwa';
       case 'ABD':
         return 'Imesitishwa';
+      case 'AWD':
+        return 'Ushindi wa Mezani (Awarded)';
+      case 'WO':
+        return 'Ushindi Bila Kucheza (Walkover)';
+      case 'SUSP':
+        return 'Mchezo Umesimamishwa';
+      case 'INT':
+        return 'Umesitishwa kwa Muda';
+      case 'TBD':
+        return 'Muda Kupangwa';
       default:
+        // Safisha maneno ya kiingereza yanayoweza kuonekana ya kiufundi
+        final lower = long.toLowerCase();
+        if (lower.contains('technical loss') || lower.contains('awarded')) {
+          return 'Ushindi wa Mezani';
+        } else if (lower.contains('walkover')) {
+          return 'Ushindi Bila Kucheza';
+        } else if (lower.contains('suspended')) {
+          return 'Umesimamishwa';
+        } else if (lower.contains('interrupted')) {
+          return 'Umesitishwa kwa Muda';
+        } else if (lower.contains('postponed')) {
+          return 'Imeahirishwa';
+        } else if (lower.contains('cancelled')) {
+          return 'Imefutwa';
+        } else if (lower.contains('abandoned')) {
+          return 'Imesitishwa';
+        } else if (lower.contains('finished')) {
+          return 'Mchezo Umekwisha';
+        } else if (lower.contains('not started')) {
+          return 'Haijaanza';
+        }
         return long;
     }
   }
@@ -407,32 +547,110 @@ class MatchModel {
         return 'Full Time';
       case 'NS':
         return 'Upcoming';
+      case 'AWD':
+        return 'Awarded';
+      case 'WO':
+        return 'Walkover';
+      case 'SUSP':
+        return 'Suspended';
+      case 'INT':
+        return 'Interrupted';
+      case 'TBD':
+        return 'Time TBD';
       default:
         return long;
     }
   }
 
+  // --- Tafsiri Sahihi ya Ligi (Isiyo na Makosa ya Kuchanganya Nchi) ---
   static String _translateLeagueToSwahili(String name, String? country) {
-    if (name.contains('Premier League') && country == 'England') {
-      return 'Ligi Kuu ya Uingereza';
-    } else if (name.contains('Champions League')) {
-      return 'Klabu Bingwa Ulaya';
-    } else if (name.contains('La Liga')) {
-      return 'La Liga ya Hispania';
-    } else if (name.contains('Serie A')) {
-      return 'Serie A ya Italia';
-    } else if (name.contains('Bundesliga')) {
-      return 'Bundesliga ya Ujerumani';
-    } else if (name.contains('Ligue 1')) {
-      return 'Ligue 1 ya Ufaransa';
-    } else if (name.contains('CAF Champions League')) {
-      return 'Klabu Bingwa Afrika';
-    } else if (name.contains('CAF Confederation')) {
-      return 'Kombe la Shirikisho Afrika';
-    } else if (name.contains('NBC Premier League')) {
-      return 'Ligi Kuu ya NBC';
+    final c = country?.trim() ?? '';
+    final n = name.trim();
+
+    // 1. Ligi Kuu ya Uingereza (Premier League ya England Pekee)
+    if (n == 'Premier League' && c == 'England') {
+      return 'Ligi Kuu ya Uingereza (Premier League)';
+    } else if (n == 'Championship' && c == 'England') {
+      return 'Championship (Uingereza)';
+    } else if (n == 'FA Cup' && c == 'England') {
+      return 'Kombe la FA (Uingereza)';
+    } else if (n == 'EFL Cup' || n == 'Carabao Cup') {
+      return 'Kombe la Carabao (Uingereza)';
+    } else if (n == 'EFL Trophy' && c == 'England') {
+      return 'EFL Trophy (Uingereza)';
+    } else if (n == 'Premier League Cup' && c == 'England') {
+      return 'Premier League Cup U21 (Uingereza)';
+    } else if (n.contains('Premier League') && c.isNotEmpty && c != 'England') {
+      // Mfano: Premier League (Jamaica), Premier League (Mongolia), n.k.
+      return '$n ($c)';
     }
-    return name;
+
+    // 2. Mashindano ya Ulaya (UEFA)
+    if (n.contains('UEFA Champions League Women') || (n.contains('Champions League') && n.contains('Women'))) {
+      return 'Klabu Bingwa Ulaya - Wanawake';
+    } else if (n == 'UEFA Champions League' || (n.contains('Champions League') && c == 'World')) {
+      return 'Klabu Bingwa Ulaya (UEFA)';
+    } else if (n == 'UEFA Europa League') {
+      return 'Europa League (UEFA)';
+    } else if (n.contains('Conference League')) {
+      return 'Conference League (UEFA)';
+    }
+
+    // 3. Mashindano ya Afrika (CAF) na Ligi Kuu ya Tanzania
+    if (n.contains('CAF Champions League')) {
+      return 'Klabu Bingwa Afrika (CAF)';
+    } else if (n.contains('CAF Confederation')) {
+      return 'Kombe la Shirikisho Afrika (CAF)';
+    } else if (n.contains('NBC Premier League') || (n.contains('Premier League') && c == 'Tanzania')) {
+      return 'Ligi Kuu ya NBC (Tanzania)';
+    }
+
+    // 4. Ligi Kuu ya Hispania (La Liga & Copa del Rey)
+    if ((n == 'La Liga' || n.contains('La Liga EA Sports')) && c == 'Spain') {
+      return 'La Liga (Hispania)';
+    } else if (n == 'La Liga 2' && c == 'Spain') {
+      return 'La Liga 2 (Hispania)';
+    } else if (n == 'Copa del Rey' && c == 'Spain') {
+      return 'Kombe la Mfalme (Copa del Rey)';
+    }
+
+    // 5. Ligi Kuu ya Italia (Serie A)
+    if (n.contains('Serie A') && c == 'Italy') {
+      return 'Serie A (Italia)';
+    } else if (n.contains('Serie A') && c == 'Brazil') {
+      return 'Serie A (Brazil)';
+    } else if (n == 'Coppa Italia') {
+      return 'Coppa Italia';
+    }
+
+    // 6. Ligi Kuu ya Ujerumani (Bundesliga)
+    if (n.contains('Bundesliga') && c == 'Germany') {
+      return 'Bundesliga (Ujerumani)';
+    } else if (n.contains('Bundesliga') && c == 'Austria') {
+      return 'Bundesliga (Austria)';
+    } else if (n == 'DFB Pokal') {
+      return 'DFB Pokal (Ujerumani)';
+    }
+
+    // 7. Ligi ya Ufaransa na Ligi za Kifaransa za Nchi Nyingine (DR Congo, Algeria)
+    if (n.contains('Ligue 1') && c == 'France') {
+      return 'Ligue 1 (Ufaransa)';
+    } else if (n.contains('Ligue 1') && (c == 'Congo-DR' || c.contains('Congo'))) {
+      // HAPA: Linafoot Ligue 1 ya DR Congo - HAIWEKWI Ligue 1 ya Ufaransa!
+      return 'Linafoot Ligue 1 (DR Congo)';
+    } else if (n.contains('Ligue 1') && c == 'Algeria') {
+      return 'Ligue 1 (Algeria)';
+    } else if (n.contains('Ligue 2') && c == 'France') {
+      return 'Ligue 2 (Ufaransa)';
+    } else if (n.contains('Ligue 2') && c == 'Algeria') {
+      return 'Ligue 2 (Algeria)';
+    }
+
+    // Ligi nyingine zenye nchi: Mfano Primera A (Colombia), Copa Uruguay (Uruguay), n.k.
+    if (c.isNotEmpty && !n.contains(c)) {
+      return '$n ($c)';
+    }
+    return n;
   }
 }
 
