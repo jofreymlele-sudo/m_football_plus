@@ -166,7 +166,9 @@ class _MatchesScreenState extends State<MatchesScreen> {
       if (_competitionFilterIndex == 1) {
         // NBC Ligi Kuu ya Tanzania
         final isNbc = m.leagueEn.toLowerCase().contains('nbc') ||
+            m.leagueEn.toLowerCase().contains('ligi kuu bara') ||
             m.leagueSw.toLowerCase().contains('nbc') ||
+            m.leagueSw.toLowerCase().contains('tanzania') ||
             (m.leagueCountry != null && m.leagueCountry!.toLowerCase().contains('tanzania'));
         if (!isNbc) return false;
       } else if (_competitionFilterIndex == 2) {
@@ -1508,11 +1510,41 @@ Pakua M Football Plus kupata matokeo mubashara na takwimu zote!''';
     }
   }
 
-  // --- Hali Tupu (Empty State) ---
+  // --- Hali Tupu (Empty State - Data Halisi Pekee Bila Za Kutunga) ---
   Widget _buildEmptyState(bool isSw) {
+    final now = DateTime.now();
+    final isYesterday = _selectedDate.year == now.year &&
+        _selectedDate.month == now.month &&
+        _selectedDate.day == now.subtract(const Duration(days: 1)).day;
+    final isTodayDate = _isToday(_selectedDate);
+    final isTomorrow = _selectedDate.year == now.year &&
+        _selectedDate.month == now.month &&
+        _selectedDate.day == now.add(const Duration(days: 1)).day;
+    final isApiSupportedDate = isYesterday || isTodayDate || isTomorrow;
+
+    String title;
+    String message;
+
+    if (_competitionFilterIndex == 1) {
+      title = isSw ? 'Hakuna Mechi za Ligi Kuu ya NBC' : 'No NBC Premier League Fixtures';
+      message = isSw
+          ? 'Hakuna mechi za Ligi Kuu ya NBC (Tanzania) zilizoratibiwa tarehe hii kwenye kalenda rasmi ya michezo. Gusa kitufe cha chini kuona mechi zote zinazoendelea.'
+          : 'No NBC Premier League fixtures scheduled on this date in the official calendar. Tap below to view all other matches.';
+    } else if (!isApiSupportedDate) {
+      title = isSw ? 'Data za Tarehe Hii Nje ya Mpango wa API' : 'Date Outside Free API Plan';
+      message = isSw
+          ? 'Mpango wa sasa wa API unatoa data halisi za Jana, Leo, na Kesho (zaidi ya mechi 400 halisi zinapatikana). Chagua Jana, Leo, au Kesho kuona mechi zote halisi.'
+          : 'The current API plan provides authentic fixtures for Yesterday, Today, and Tomorrow (400+ real matches). Select Yesterday, Today, or Tomorrow.';
+    } else {
+      title = isSw ? 'Hakuna Mechi Zilizopatikana' : 'No Fixtures Found';
+      message = isSw
+          ? 'Hakuna mechi zilizokidhi vigezo vyako kwenye tarehe hii. Jaribu kubadilisha kichujio au ubonyeze kitufe cha kupakia upya.'
+          : 'No fixtures found matching your criteria on this date. Try another filter or tap refresh.';
+    }
+
     return Container(
       margin: const EdgeInsets.all(24),
-      padding: const EdgeInsets.all(28),
+      padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
         color: MColors.surface,
         borderRadius: BorderRadius.circular(16),
@@ -1520,46 +1552,109 @@ Pakua M Football Plus kupata matokeo mubashara na takwimu zote!''';
       ),
       child: Column(
         children: [
-          const Icon(
-            Icons.sports_soccer_outlined,
-            size: 48,
-            color: MColors.scoresCyan,
+          Icon(
+            !isApiSupportedDate ? Icons.calendar_today_rounded : Icons.sports_soccer_outlined,
+            size: 44,
+            color: !isApiSupportedDate ? MColors.highlightsGold : MColors.scoresCyan,
           ),
           const SizedBox(height: 14),
           Text(
-            isSw ? 'Hakuna Mechi Zilizopatikana' : 'No Fixtures Found',
+            title,
+            textAlign: TextAlign.center,
             style: GoogleFonts.outfit(
-              fontSize: 17,
+              fontSize: 16.5,
               fontWeight: FontWeight.bold,
               color: MColors.textWhite,
             ),
           ),
-          const SizedBox(height: 6),
+          const SizedBox(height: 8),
           Text(
-            isSw
-                ? 'Hakuna mechi zilizokidhi vigezo au zilizoratibiwa tarehe hii. Jaribu kuchagua tarehe nyingine au ubonyeze kitufe cha kupakia upya.'
-                : 'No fixtures match your criteria or scheduled on this date. Try another date or tap refresh.',
+            message,
             textAlign: TextAlign.center,
             style: GoogleFonts.manrope(
               fontSize: 12,
-              color: MColors.textWhite.withValues(alpha: 0.65),
-              height: 1.4,
+              color: MColors.textWhite.withValues(alpha: 0.7),
+              height: 1.45,
             ),
           ),
           const SizedBox(height: 18),
-          ElevatedButton.icon(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: MColors.scoresCyan,
-              foregroundColor: MColors.background,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+          if (_competitionFilterIndex != 0) ...[
+            ElevatedButton.icon(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: MColors.scoresCyan,
+                foregroundColor: MColors.background,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+              ),
+              onPressed: () {
+                setState(() {
+                  _competitionFilterIndex = 0;
+                });
+              },
+              icon: const Icon(Icons.grid_view_rounded, size: 16),
+              label: Text(
+                isSw ? 'Onyesha Mashindano Yote' : 'Show All Competitions',
+                style: GoogleFonts.outfit(fontWeight: FontWeight.bold),
+              ),
             ),
-            onPressed: () => _loadMatchesFromApi(forceRefresh: true),
-            icon: const Icon(Icons.refresh, size: 16),
-            label: Text(
-              isSw ? 'Pakia Upya Mechi' : 'Refresh Fixtures',
-              style: GoogleFonts.outfit(fontWeight: FontWeight.bold),
+          ] else if (!isApiSupportedDate) ...[
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              alignment: WrapAlignment.center,
+              children: [
+                ElevatedButton.icon(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: MColors.scoresCyan,
+                    foregroundColor: MColors.background,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                  ),
+                  onPressed: () {
+                    setState(() {
+                      _selectedDate = DateTime.now();
+                    });
+                    _loadMatchesFromApi();
+                  },
+                  icon: const Icon(Icons.today, size: 15),
+                  label: Text(
+                    isSw ? 'Mechi za Leo (115+)' : "Today's Matches (115+)",
+                    style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 12),
+                  ),
+                ),
+                OutlinedButton.icon(
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: MColors.highlightsGold,
+                    side: const BorderSide(color: MColors.highlightsGold),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                  ),
+                  onPressed: () {
+                    setState(() {
+                      _selectedDate = DateTime.now().add(const Duration(days: 1));
+                    });
+                    _loadMatchesFromApi();
+                  },
+                  icon: const Icon(Icons.arrow_forward_rounded, size: 15),
+                  label: Text(
+                    isSw ? 'Kesho (204+)' : 'Tomorrow (204+)',
+                    style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 12),
+                  ),
+                ),
+              ],
             ),
-          ),
+          ] else ...[
+            ElevatedButton.icon(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: MColors.scoresCyan,
+                foregroundColor: MColors.background,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+              ),
+              onPressed: () => _loadMatchesFromApi(forceRefresh: true),
+              icon: const Icon(Icons.refresh, size: 16),
+              label: Text(
+                isSw ? 'Pakia Upya Mechi' : 'Refresh Fixtures',
+                style: GoogleFonts.outfit(fontWeight: FontWeight.bold),
+              ),
+            ),
+          ],
         ],
       ),
     );

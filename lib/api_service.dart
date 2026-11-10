@@ -11,8 +11,8 @@ class FootballApiService {
   static const String _apiFootballHost = 'v3.football.api-sports.io';
   static const String _apiFootballBaseUrl = 'https://v3.football.api-sports.io';
 
-  // API Key ya bure ya TheSportsDB
-  static const String _theSportsDbKey = '3';
+  // API Key ya TheSportsDB (Key '123' ndio active public test key)
+  static const String _theSportsDbKey = '123';
   static const String _theSportsDbBaseUrl = 'https://www.thesportsdb.com/api/v1/json/$_theSportsDbKey';
 
   // Singleton instance
@@ -78,9 +78,9 @@ class FootballApiService {
   DateTime? _lastTodaysFetch;
 
   // --------------------------------------------------------------------------
-  // B. KUCHUKUA MECHI ZA LEO (TODAY'S MATCHES) KUTOKA API-FOOTBALL
+  // B. KUCHUKUA MECHI ZA TAREHE / LEO (MATCHES ON DATE) KUTOKA API-FOOTBALL
   // --------------------------------------------------------------------------
-  /// Inachukua mechi za tarehe maalum (chaguo-msingi ni tarehe ya leo YYYY-MM-DD)
+  /// Inachukua mechi halisi za tarehe maalum (chaguo-msingi ni tarehe ya leo YYYY-MM-DD)
   Future<List<MatchModel>> getTodaysMatches({String? date, bool forceRefresh = false}) async {
     final now = DateTime.now();
     final targetDate = date ??
@@ -98,7 +98,7 @@ class FootballApiService {
     final uri = Uri.parse('$_apiFootballBaseUrl/fixtures?date=$targetDate');
 
     try {
-      debugPrint('[M FOOTBALL PLUS API] Inaanza kupiga Mechi za Leo ($targetDate): $uri');
+      debugPrint('[M FOOTBALL PLUS API] Inaanza kupiga Mechi za Tarehe ($targetDate): $uri');
 
       final response = await http
           .get(uri, headers: _apiFootballHeaders)
@@ -120,7 +120,7 @@ class FootballApiService {
             return aPri.compareTo(bPri);
           });
 
-          // Weka kwenye cache
+          // Weka kwenye cache ikiwa ni ya leo
           if (date == null) {
             _cachedTodaysMatches = allMatches;
             _lastTodaysFetch = now;
@@ -130,24 +130,14 @@ class FootballApiService {
         }
       }
 
-      // Ikiwa API haikupata mechi (kwa mfano tarehe zilizozuiliwa na mpango wa bure kama 12, 13, 14, 15 Nov):
-      final scheduled = ScheduledFixturesDatabase.getFixturesForDate(targetDate);
-      if (scheduled.isNotEmpty) {
-        debugPrint('[M FOOTBALL PLUS] Inatumia ratiba kamili ya tarehe $targetDate (${scheduled.length} mechi)');
-        return scheduled;
-      }
-
+      // Ikiwa API haikupata mechi kwenye tarehe iliyoombwa:
       if (date != null) {
         return [];
       }
 
       return _cachedTodaysMatches ?? [];
     } catch (e) {
-      debugPrint('[M FOOTBALL PLUS API Exception] Mechi za Leo zimefeli: $e');
-      final scheduled = ScheduledFixturesDatabase.getFixturesForDate(targetDate);
-      if (scheduled.isNotEmpty) {
-        return scheduled;
-      }
+      debugPrint('[M FOOTBALL PLUS API Exception] Mechi za Tarehe zimefeli: $e');
       if (date != null) {
         return [];
       }
@@ -162,7 +152,7 @@ class FootballApiService {
   // --------------------------------------------------------------------------
   // B2. KUCHUKUA MECHI ZINAZOFUATA (UPCOMING MATCHES) KUTOKA API-FOOTBALL
   // --------------------------------------------------------------------------
-  /// Inachukua mechi halisi zinazofuata (za kesho) kupitia date endpoint inayofanya kazi 100% bure
+  /// Inachukua mechi 200+ halisi zinazofuata kesho moja kwa moja kutoka API-Football
   Future<List<MatchModel>> getUpcomingMatches({bool forceRefresh = false}) async {
     final now = DateTime.now();
 
@@ -182,7 +172,7 @@ class FootballApiService {
     final uri = Uri.parse('$_apiFootballBaseUrl/fixtures?date=$tomorrowDate');
 
     try {
-      debugPrint('[M FOOTBALL PLUS API] Inavuta Mechi Zinazofuata Kesho ($tomorrowDate): $uri');
+      debugPrint('[M FOOTBALL PLUS API] Inavuta Mechi Halisi Zinazofuata Kesho ($tomorrowDate): $uri');
 
       final response = await http
           .get(uri, headers: _apiFootballHeaders)
@@ -196,28 +186,21 @@ class FootballApiService {
         allMatches = responseList
             .map((item) => MatchModel.fromApiFootballJson(item as Map<String, dynamic>))
             .toList();
+
+        // Panga kwa ligi maarufu juu kwanza
+        allMatches.sort((a, b) {
+          final aPri = MatchModel.getLeaguePriority(a.leagueEn, a.leagueCountry);
+          final bPri = MatchModel.getLeaguePriority(b.leagueEn, b.leagueCountry);
+          return aPri.compareTo(bPri);
+        });
+
+        _cachedUpcomingMatches = allMatches;
+        _lastUpcomingFetch = now;
       }
 
-      // Jumuisha ratiba kamili ya wiki (Nov 11 - 17) ikijumuisha NBC Premier League na UEFA
-      final allUpcoming = ScheduledFixturesDatabase.getAllUpcoming();
-      allMatches.addAll(allUpcoming);
-
-      // Panga kwa ligi maarufu juu kwanza
-      allMatches.sort((a, b) {
-        final aPri = MatchModel.getLeaguePriority(a.leagueEn, a.leagueCountry);
-        final bPri = MatchModel.getLeaguePriority(b.leagueEn, b.leagueCountry);
-        return aPri.compareTo(bPri);
-      });
-
-      _cachedUpcomingMatches = allMatches;
-      _lastUpcomingFetch = now;
       return allMatches;
     } catch (e) {
       debugPrint('[M FOOTBALL PLUS API Exception] Mechi Zinazofuata zimefeli: $e');
-      final allUpcoming = ScheduledFixturesDatabase.getAllUpcoming();
-      if (allUpcoming.isNotEmpty) {
-        return allUpcoming;
-      }
       return _cachedUpcomingMatches ?? [];
     }
   }
@@ -490,8 +473,12 @@ class MatchModel {
       return 1;
     }
 
-    // 2. Mashindano ya Afrika na Tanzania (CAF & NBC)
-    if (n.contains('caf') || n.contains('nbc') || c == 'tanzania' || n.contains('shirikisho')) {
+    // 2. Mashindano ya Afrika na Tanzania (CAF & NBC Ligi Kuu Bara)
+    if (n.contains('caf') ||
+        n.contains('nbc') ||
+        n.contains('ligi kuu bara') ||
+        c == 'tanzania' ||
+        n.contains('shirikisho')) {
       return 2;
     }
 
@@ -566,7 +553,6 @@ class MatchModel {
       case 'TBD':
         return 'Muda Kupangwa';
       default:
-        // Safisha maneno ya kiingereza yanayoweza kuonekana ya kiufundi
         final lower = long.toLowerCase();
         if (lower.contains('technical loss') || lower.contains('awarded')) {
           return 'Ushindi wa Mezani';
@@ -641,7 +627,6 @@ class MatchModel {
     } else if (n == 'Premier League Cup' && c == 'England') {
       return 'Premier League Cup U21 (Uingereza)';
     } else if (n.contains('Premier League') && c.isNotEmpty && c != 'England') {
-      // Mfano: Premier League (Jamaica), Premier League (Mongolia), n.k.
       return '$n ($c)';
     }
 
@@ -661,7 +646,11 @@ class MatchModel {
       return 'Klabu Bingwa Afrika (CAF)';
     } else if (n.contains('CAF Confederation')) {
       return 'Kombe la Shirikisho Afrika (CAF)';
-    } else if (n.contains('NBC Premier League') || (n.contains('Premier League') && c == 'Tanzania')) {
+    } else if (n.toLowerCase().contains('ligi kuu bara') ||
+        n.contains('NBC Premier League') ||
+        (n.contains('Premier League') && c == 'Tanzania') ||
+        (n.contains('Ligi Kuu') && c == 'Tanzania') ||
+        c == 'Tanzania') {
       return 'Ligi Kuu ya NBC (Tanzania)';
     }
 
@@ -696,7 +685,6 @@ class MatchModel {
     if (n.contains('Ligue 1') && c == 'France') {
       return 'Ligue 1 (Ufaransa)';
     } else if (n.contains('Ligue 1') && (c == 'Congo-DR' || c.contains('Congo'))) {
-      // HAPA: Linafoot Ligue 1 ya DR Congo - HAIWEKWI Ligue 1 ya Ufaransa!
       return 'Linafoot Ligue 1 (DR Congo)';
     } else if (n.contains('Ligue 1') && c == 'Algeria') {
       return 'Ligue 1 (Algeria)';
@@ -744,1097 +732,4 @@ class TheSportsDbTeam {
       description: json['strDescriptionEN'] as String?,
     );
   }
-}
-
-// ============================================================================
-// 4. RATIBA KAMILI YA KIMATAIFA NA NBC PREMIER LEAGUE (UPCOMING SCHEDULE 12-16 NOV)
-// ============================================================================
-class ScheduledFixturesDatabase {
-  static List<MatchModel> getFixturesForDate(String dateStr) {
-    if (dateStr == '2026-11-11') return _nov11Matches;
-    if (dateStr == '2026-11-12') return _nov12Matches;
-    if (dateStr == '2026-11-13') return _nov13Matches;
-    if (dateStr == '2026-11-14') return _nov14Matches;
-    if (dateStr == '2026-11-15') return _nov15Matches;
-    if (dateStr == '2026-11-16') return _nov16Matches;
-    if (dateStr == '2026-11-17') return _nov17Matches;
-    return [];
-  }
-
-  static List<MatchModel> getAllUpcoming() {
-    return [
-      ..._nov11Matches,
-      ..._nov12Matches,
-      ..._nov13Matches,
-      ..._nov14Matches,
-      ..._nov15Matches,
-      ..._nov16Matches,
-      ..._nov17Matches,
-    ];
-  }
-
-  // --- JUMATANO: 11 NOVEMBA 2026 ---
-  static const List<MatchModel> _nov11Matches = [
-    // NBC Premier League (Tanzania)
-    MatchModel(
-      id: 'sch_11_1',
-      fixtureId: 201101,
-      leagueEn: 'NBC Premier League',
-      leagueSw: 'Ligi Kuu ya NBC (Tanzania)',
-      leagueLogo: '',
-      leagueCountry: 'Tanzania',
-      homeTeam: 'Mashujaa FC',
-      awayTeam: 'Pamba Jiji FC',
-      homeTeamLogo: '',
-      awayTeamLogo: '',
-      homeScore: 0,
-      awayScore: 0,
-      matchTime: '16:00',
-      isLive: false,
-      statusShort: 'NS',
-      statusEn: 'Wednesday, 16:00',
-      statusSw: 'Jumatano, Saa 16:00',
-      venue: 'Lake Tanganyika Stadium, Kigoma',
-      homeColor: Color(0xFF1E88E5),
-      awayColor: Color(0xFF43A047),
-      homeWinProb: 44,
-      drawProb: 31,
-      awayWinProb: 25,
-      homeForm: 'D-W-L-D-W',
-      awayForm: 'L-D-W-L-D',
-      keyPlayer: 'Selemani Mwalimu',
-      h2hSummary: 'Mechi 2 zilizopita: Ushindi 1, Sare 1',
-    ),
-    MatchModel(
-      id: 'sch_11_2',
-      fixtureId: 201102,
-      leagueEn: 'NBC Premier League',
-      leagueSw: 'Ligi Kuu ya NBC (Tanzania)',
-      leagueLogo: '',
-      leagueCountry: 'Tanzania',
-      homeTeam: 'Namungo FC',
-      awayTeam: 'Fountain Gate FC',
-      homeTeamLogo: '',
-      awayTeamLogo: '',
-      homeScore: 0,
-      awayScore: 0,
-      matchTime: '19:00',
-      isLive: false,
-      statusShort: 'NS',
-      statusEn: 'Wednesday, 19:00',
-      statusSw: 'Jumatano, Saa 19:00',
-      venue: 'Majaliwa Stadium, Ruangwa',
-      homeColor: Color(0xFF00ACC1),
-      awayColor: Color(0xFFF4511E),
-      homeWinProb: 47,
-      drawProb: 30,
-      awayWinProb: 23,
-      homeForm: 'W-L-D-W-L',
-      awayForm: 'W-W-L-D-L',
-      keyPlayer: 'Hashim Manyanya',
-      h2hSummary: 'Mechi 3 zilizopita: Namungo 2, Fountain Gate 1',
-    ),
-    // UEFA Women\'s Champions League
-    MatchModel(
-      id: 'sch_11_3',
-      fixtureId: 201103,
-      leagueEn: 'UEFA Women\'s Champions League',
-      leagueSw: 'Ligi ya Mabingwa Ulaya (Wanawake)',
-      leagueLogo: 'https://media.api-sports.io/football/leagues/498.png',
-      leagueCountry: 'Europe',
-      homeTeam: 'Juventus W',
-      awayTeam: 'Arsenal W',
-      homeTeamLogo: 'https://media.api-sports.io/football/teams/10200.png',
-      awayTeamLogo: 'https://media.api-sports.io/football/teams/1944.png',
-      homeScore: 0,
-      awayScore: 0,
-      matchTime: '20:45',
-      isLive: false,
-      statusShort: 'NS',
-      statusEn: 'Wednesday, 20:45',
-      statusSw: 'Jumatano, Saa 20:45',
-      venue: 'Juventus Stadium, Turin',
-      homeWinProb: 38,
-      drawProb: 26,
-      awayWinProb: 36,
-      homeForm: 'W-W-W-D-W',
-      awayForm: 'W-D-W-W-L',
-      keyPlayer: 'Alessia Russo (Arsenal W)',
-      h2hSummary: 'Mechi 2 zilizopita: Sare 1, Arsenal 1',
-    ),
-    MatchModel(
-      id: 'sch_11_4',
-      fixtureId: 201104,
-      leagueEn: 'UEFA Women\'s Champions League',
-      leagueSw: 'Ligi ya Mabingwa Ulaya (Wanawake)',
-      leagueLogo: 'https://media.api-sports.io/football/leagues/498.png',
-      leagueCountry: 'Europe',
-      homeTeam: 'Bayern Munich W',
-      awayTeam: 'Valerenga W',
-      homeTeamLogo: 'https://media.api-sports.io/football/teams/4925.png',
-      awayTeamLogo: 'https://media.api-sports.io/football/teams/7553.png',
-      homeScore: 0,
-      awayScore: 0,
-      matchTime: '23:00',
-      isLive: false,
-      statusShort: 'NS',
-      statusEn: 'Wednesday, 23:00',
-      statusSw: 'Jumatano, Saa 23:00',
-      venue: 'FC Bayern Campus, Munich',
-      homeWinProb: 82,
-      drawProb: 12,
-      awayWinProb: 6,
-      homeForm: 'W-W-W-W-W',
-      awayForm: 'W-L-W-D-L',
-      keyPlayer: 'Lea Schüller (Bayern)',
-    ),
-    // AFCON Qualifiers
-    MatchModel(
-      id: 'sch_11_5',
-      fixtureId: 201105,
-      leagueEn: 'Africa Cup of Nations Qualification',
-      leagueSw: 'Kufuzu Mataifa ya Afrika (AFCON)',
-      leagueLogo: 'https://media.api-sports.io/football/leagues/32.png',
-      leagueCountry: 'Africa',
-      homeTeam: 'Liberia',
-      awayTeam: 'Togo',
-      homeTeamLogo: 'https://media.api-sports.io/football/teams/1508.png',
-      awayTeamLogo: 'https://media.api-sports.io/football/teams/1518.png',
-      homeScore: 0,
-      awayScore: 0,
-      matchTime: '19:00',
-      isLive: false,
-      statusShort: 'NS',
-      statusEn: 'Wednesday, 19:00',
-      statusSw: 'Jumatano, Saa 19:00',
-      venue: 'Samuel Kanyon Doe Sports Complex, Monrovia',
-      homeWinProb: 35,
-      drawProb: 35,
-      awayWinProb: 30,
-      homeForm: 'L-L-D-W-L',
-      awayForm: 'D-D-L-L-W',
-    ),
-    MatchModel(
-      id: 'sch_11_6',
-      fixtureId: 201106,
-      leagueEn: 'Africa Cup of Nations Qualification',
-      leagueSw: 'Kufuzu Mataifa ya Afrika (AFCON)',
-      leagueLogo: 'https://media.api-sports.io/football/leagues/32.png',
-      leagueCountry: 'Africa',
-      homeTeam: 'Chad',
-      awayTeam: 'Sierra Leone',
-      homeTeamLogo: 'https://media.api-sports.io/football/teams/1512.png',
-      awayTeamLogo: 'https://media.api-sports.io/football/teams/1523.png',
-      homeScore: 0,
-      awayScore: 0,
-      matchTime: '22:00',
-      isLive: false,
-      statusShort: 'NS',
-      statusEn: 'Wednesday, 22:00',
-      statusSw: 'Jumatano, Saa 22:00',
-      venue: 'Stade Municipal d\'Atchouko, N\'Djamena',
-      homeWinProb: 28,
-      drawProb: 34,
-      awayWinProb: 38,
-      homeForm: 'D-L-D-L-L',
-      awayForm: 'W-L-D-L-D',
-    ),
-  ];
-
-  // --- ALHAMISI: 12 NOVEMBA 2026 ---
-  static const List<MatchModel> _nov12Matches = [
-    // UEFA Nations League
-    MatchModel(
-      id: 'sch_12_1',
-      fixtureId: 201201,
-      leagueEn: 'UEFA Nations League',
-      leagueSw: 'UEFA Nations League',
-      leagueLogo: 'https://media.api-sports.io/football/leagues/5.png',
-      leagueCountry: 'World',
-      homeTeam: 'France',
-      awayTeam: 'Israel',
-      homeTeamLogo: 'https://media.api-sports.io/football/teams/2.png',
-      awayTeamLogo: 'https://media.api-sports.io/football/teams/15.png',
-      homeScore: 0,
-      awayScore: 0,
-      matchTime: '22:45',
-      isLive: false,
-      statusShort: 'NS',
-      statusEn: 'Thursday, 22:45',
-      statusSw: 'Alhamisi, Saa 22:45',
-      venue: 'Stade de France, Paris',
-      referee: 'Tobias Stieler, Germany',
-      homeWinProb: 78,
-      drawProb: 15,
-      awayWinProb: 7,
-      homeForm: 'W-W-W-D-W',
-      awayForm: 'L-L-L-W-L',
-      keyPlayer: 'Kylian Mbappé',
-      h2hSummary: 'Mechi 4 zilizopita: Ufaransa imeshinda 3, Sare 1',
-    ),
-    MatchModel(
-      id: 'sch_12_2',
-      fixtureId: 201202,
-      leagueEn: 'UEFA Nations League',
-      leagueSw: 'UEFA Nations League',
-      leagueLogo: 'https://media.api-sports.io/football/leagues/5.png',
-      leagueCountry: 'World',
-      homeTeam: 'Belgium',
-      awayTeam: 'Italy',
-      homeTeamLogo: 'https://media.api-sports.io/football/teams/1.png',
-      awayTeamLogo: 'https://media.api-sports.io/football/teams/768.png',
-      homeScore: 0,
-      awayScore: 0,
-      matchTime: '22:45',
-      isLive: false,
-      statusShort: 'NS',
-      statusEn: 'Thursday, 22:45',
-      statusSw: 'Alhamisi, Saa 22:45',
-      venue: 'King Baudouin Stadium, Brussels',
-      referee: 'Radu Petrescu, Romania',
-      homeWinProb: 38,
-      drawProb: 31,
-      awayWinProb: 31,
-      homeForm: 'D-L-W-D-L',
-      awayForm: 'W-D-W-W-D',
-      keyPlayer: 'Kevin De Bruyne',
-      h2hSummary: 'Mechi 5 zilizopita: Italia 3, Ubelgiji 1, Sare 1',
-    ),
-    MatchModel(
-      id: 'sch_12_3',
-      fixtureId: 201203,
-      leagueEn: 'UEFA Nations League',
-      leagueSw: 'UEFA Nations League',
-      leagueLogo: 'https://media.api-sports.io/football/leagues/5.png',
-      leagueCountry: 'World',
-      homeTeam: 'Greece',
-      awayTeam: 'England',
-      homeTeamLogo: 'https://media.api-sports.io/football/teams/11.png',
-      awayTeamLogo: 'https://media.api-sports.io/football/teams/10.png',
-      homeScore: 0,
-      awayScore: 0,
-      matchTime: '22:45',
-      isLive: false,
-      statusShort: 'NS',
-      statusEn: 'Thursday, 22:45',
-      statusSw: 'Alhamisi, Saa 22:45',
-      venue: 'Athens Olympic Stadium, Athens',
-      referee: 'Daniel Siebert, Germany',
-      homeWinProb: 25,
-      drawProb: 28,
-      awayWinProb: 47,
-      homeForm: 'W-W-W-W-L',
-      awayForm: 'W-L-W-W-W',
-      keyPlayer: 'Harry Kane',
-      h2hSummary: 'Mechi 4 zilizopita: Uingereza 2, Ugiriki 1, Sare 1',
-    ),
-    MatchModel(
-      id: 'sch_12_4',
-      fixtureId: 201204,
-      leagueEn: 'UEFA Nations League',
-      leagueSw: 'UEFA Nations League',
-      leagueLogo: 'https://media.api-sports.io/football/leagues/5.png',
-      leagueCountry: 'World',
-      homeTeam: 'Republic of Ireland',
-      awayTeam: 'Finland',
-      homeTeamLogo: 'https://media.api-sports.io/football/teams/1108.png',
-      awayTeamLogo: 'https://media.api-sports.io/football/teams/1110.png',
-      homeScore: 0,
-      awayScore: 0,
-      matchTime: '22:45',
-      isLive: false,
-      statusShort: 'NS',
-      statusEn: 'Thursday, 22:45',
-      statusSw: 'Alhamisi, Saa 22:45',
-      venue: 'Aviva Stadium, Dublin',
-      homeWinProb: 46,
-      drawProb: 30,
-      awayWinProb: 24,
-      homeForm: 'W-L-L-W-L',
-      awayForm: 'L-L-L-L-D',
-      keyPlayer: 'Evan Ferguson',
-    ),
-    // Kufuzu Kombe la Dunia - CONMEBOL (Marekani Kusini)
-    MatchModel(
-      id: 'sch_12_5',
-      fixtureId: 201205,
-      leagueEn: 'World Cup - Qualification South America',
-      leagueSw: 'Kufuzu Kombe la Dunia (CONMEBOL)',
-      leagueLogo: 'https://media.api-sports.io/football/leagues/34.png',
-      leagueCountry: 'World',
-      homeTeam: 'Venezuela',
-      awayTeam: 'Brazil',
-      homeTeamLogo: 'https://media.api-sports.io/football/teams/2382.png',
-      awayTeamLogo: 'https://media.api-sports.io/football/teams/6.png',
-      homeScore: 0,
-      awayScore: 0,
-      matchTime: '00:00',
-      isLive: false,
-      statusShort: 'NS',
-      statusEn: 'Thursday Night, 00:00',
-      statusSw: 'Alhamisi Usiku, Saa 00:00',
-      venue: 'Estadio Monumental de Maturín',
-      homeWinProb: 18,
-      drawProb: 27,
-      awayWinProb: 55,
-      homeForm: 'D-D-L-W-D',
-      awayForm: 'W-W-L-W-L',
-      keyPlayer: 'Vinícius Júnior',
-      h2hSummary: 'Mechi 6 zilizopita: Brazil 4, Sare 2, Venezuela 0',
-    ),
-    MatchModel(
-      id: 'sch_12_6',
-      fixtureId: 201206,
-      leagueEn: 'World Cup - Qualification South America',
-      leagueSw: 'Kufuzu Kombe la Dunia (CONMEBOL)',
-      leagueLogo: 'https://media.api-sports.io/football/leagues/34.png',
-      leagueCountry: 'World',
-      homeTeam: 'Paraguay',
-      awayTeam: 'Argentina',
-      homeTeamLogo: 'https://media.api-sports.io/football/teams/2383.png',
-      awayTeamLogo: 'https://media.api-sports.io/football/teams/26.png',
-      homeScore: 0,
-      awayScore: 0,
-      matchTime: '02:30',
-      isLive: false,
-      statusShort: 'NS',
-      statusEn: 'Thursday Late, 02:30',
-      statusSw: 'Alhamisi Usiku Sana, Saa 02:30',
-      venue: 'Estadio Defensores del Chaco, Asunción',
-      homeWinProb: 21,
-      drawProb: 29,
-      awayWinProb: 50,
-      homeForm: 'W-D-W-L-D',
-      awayForm: 'W-D-L-W-W',
-      keyPlayer: 'Lionel Messi',
-      h2hSummary: 'Mechi 5 zilizopita: Argentina 3, Sare 2, Paraguay 0',
-    ),
-    // Kufuzu Kombe la Mataifa ya Afrika (AFCON)
-    MatchModel(
-      id: 'sch_12_7',
-      fixtureId: 201207,
-      leagueEn: 'Africa Cup of Nations - Qualification',
-      leagueSw: 'Kufuzu AFCON (Afrika)',
-      leagueLogo: 'https://media.api-sports.io/football/leagues/32.png',
-      leagueCountry: 'World',
-      homeTeam: 'Rwanda',
-      awayTeam: 'Libya',
-      homeTeamLogo: 'https://media.api-sports.io/football/teams/1505.png',
-      awayTeamLogo: 'https://media.api-sports.io/football/teams/1506.png',
-      homeScore: 0,
-      awayScore: 0,
-      matchTime: '19:00',
-      isLive: false,
-      statusShort: 'NS',
-      statusEn: 'Thursday, 19:00',
-      statusSw: 'Alhamisi, Saa 19:00',
-      venue: 'Amahoro Stadium, Kigali',
-      homeWinProb: 44,
-      drawProb: 32,
-      awayWinProb: 24,
-      homeForm: 'W-L-D-W-D',
-      awayForm: 'L-L-D-W-D',
-    ),
-  ];
-
-  // --- IJUMAA: 13 NOVEMBA 2026 ---
-  static const List<MatchModel> _nov13Matches = [
-    // UEFA Nations League
-    MatchModel(
-      id: 'sch_13_1',
-      fixtureId: 201301,
-      leagueEn: 'UEFA Nations League',
-      leagueSw: 'UEFA Nations League',
-      leagueLogo: 'https://media.api-sports.io/football/leagues/5.png',
-      leagueCountry: 'World',
-      homeTeam: 'Portugal',
-      awayTeam: 'Poland',
-      homeTeamLogo: 'https://media.api-sports.io/football/teams/27.png',
-      awayTeamLogo: 'https://media.api-sports.io/football/teams/24.png',
-      homeScore: 0,
-      awayScore: 0,
-      matchTime: '22:45',
-      isLive: false,
-      statusShort: 'NS',
-      statusEn: 'Friday, 22:45',
-      statusSw: 'Ijumaa, Saa 22:45',
-      venue: 'Estádio do Dragão, Porto',
-      homeWinProb: 72,
-      drawProb: 18,
-      awayWinProb: 10,
-      homeForm: 'D-W-W-W-W',
-      awayForm: 'D-L-L-W-D',
-      keyPlayer: 'Cristiano Ronaldo',
-      h2hSummary: 'Mechi 5 zilizopita: Ureno 3, Poland 0, Sare 2',
-    ),
-    MatchModel(
-      id: 'sch_13_2',
-      fixtureId: 201302,
-      leagueEn: 'UEFA Nations League',
-      leagueSw: 'UEFA Nations League',
-      leagueLogo: 'https://media.api-sports.io/football/leagues/5.png',
-      leagueCountry: 'World',
-      homeTeam: 'Denmark',
-      awayTeam: 'Spain',
-      homeTeamLogo: 'https://media.api-sports.io/football/teams/21.png',
-      awayTeamLogo: 'https://media.api-sports.io/football/teams/9.png',
-      homeScore: 0,
-      awayScore: 0,
-      matchTime: '22:45',
-      isLive: false,
-      statusShort: 'NS',
-      statusEn: 'Friday, 22:45',
-      statusSw: 'Ijumaa, Saa 22:45',
-      venue: 'Parken Stadium, Copenhagen',
-      homeWinProb: 24,
-      drawProb: 28,
-      awayWinProb: 48,
-      homeForm: 'D-L-W-W-D',
-      awayForm: 'W-W-W-W-D',
-      keyPlayer: 'Lamine Yamal',
-      h2hSummary: 'Mechi 4 zilizopita: Hispania 3, Denmark 0, Sare 1',
-    ),
-    MatchModel(
-      id: 'sch_13_3',
-      fixtureId: 201303,
-      leagueEn: 'UEFA Nations League',
-      leagueSw: 'UEFA Nations League',
-      leagueLogo: 'https://media.api-sports.io/football/leagues/5.png',
-      leagueCountry: 'World',
-      homeTeam: 'Scotland',
-      awayTeam: 'Croatia',
-      homeTeamLogo: 'https://media.api-sports.io/football/teams/1107.png',
-      awayTeamLogo: 'https://media.api-sports.io/football/teams/3.png',
-      homeScore: 0,
-      awayScore: 0,
-      matchTime: '22:45',
-      isLive: false,
-      statusShort: 'NS',
-      statusEn: 'Friday, 22:45',
-      statusSw: 'Ijumaa, Saa 22:45',
-      venue: 'Hampden Park, Glasgow',
-      homeWinProb: 28,
-      drawProb: 31,
-      awayWinProb: 41,
-      homeForm: 'D-L-L-L-D',
-      awayForm: 'D-W-W-L-D',
-      keyPlayer: 'Luka Modrić',
-    ),
-    MatchModel(
-      id: 'sch_13_4',
-      fixtureId: 201304,
-      leagueEn: 'UEFA Nations League',
-      leagueSw: 'UEFA Nations League',
-      leagueLogo: 'https://media.api-sports.io/football/leagues/5.png',
-      leagueCountry: 'World',
-      homeTeam: 'Switzerland',
-      awayTeam: 'Serbia',
-      homeTeamLogo: 'https://media.api-sports.io/football/teams/15.png',
-      awayTeamLogo: 'https://media.api-sports.io/football/teams/14.png',
-      homeScore: 0,
-      awayScore: 0,
-      matchTime: '22:45',
-      isLive: false,
-      statusShort: 'NS',
-      statusEn: 'Friday, 22:45',
-      statusSw: 'Ijumaa, Saa 22:45',
-      venue: 'Letzigrund, Zurich',
-      homeWinProb: 49,
-      drawProb: 28,
-      awayWinProb: 23,
-      homeForm: 'D-L-L-L-D',
-      awayForm: 'L-W-L-D-D',
-      keyPlayer: 'Granit Xhaka',
-    ),
-    // Kufuzu Kombe la Dunia - CONMEBOL
-    MatchModel(
-      id: 'sch_13_5',
-      fixtureId: 201305,
-      leagueEn: 'World Cup - Qualification South America',
-      leagueSw: 'Kufuzu Kombe la Dunia (CONMEBOL)',
-      leagueLogo: 'https://media.api-sports.io/football/leagues/34.png',
-      leagueCountry: 'World',
-      homeTeam: 'Uruguay',
-      awayTeam: 'Colombia',
-      homeTeamLogo: 'https://media.api-sports.io/football/teams/7.png',
-      awayTeamLogo: 'https://media.api-sports.io/football/teams/8.png',
-      homeScore: 0,
-      awayScore: 0,
-      matchTime: '03:00',
-      isLive: false,
-      statusShort: 'NS',
-      statusEn: 'Friday Late, 03:00',
-      statusSw: 'Ijumaa Usiku Sana, Saa 03:00',
-      venue: 'Estadio Centenario, Montevideo',
-      homeWinProb: 44,
-      drawProb: 30,
-      awayWinProb: 26,
-      homeForm: 'D-D-D-W-W',
-      awayForm: 'W-L-W-W-D',
-      keyPlayer: 'Federico Valverde',
-      h2hSummary: 'Dabi kali ya Amerika Kusini: Ushindani mkubwa',
-    ),
-    // Kufuzu AFCON
-    MatchModel(
-      id: 'sch_13_6',
-      fixtureId: 201306,
-      leagueEn: 'Africa Cup of Nations - Qualification',
-      leagueSw: 'Kufuzu AFCON (Afrika)',
-      leagueLogo: 'https://media.api-sports.io/football/leagues/32.png',
-      leagueCountry: 'World',
-      homeTeam: 'Zambia',
-      awayTeam: 'Ivory Coast',
-      homeTeamLogo: 'https://media.api-sports.io/football/teams/1507.png',
-      awayTeamLogo: 'https://media.api-sports.io/football/teams/1508.png',
-      homeScore: 0,
-      awayScore: 0,
-      matchTime: '19:00',
-      isLive: false,
-      statusShort: 'NS',
-      statusEn: 'Friday, 19:00',
-      statusSw: 'Ijumaa, Saa 19:00',
-      venue: 'Levy Mwanawasa Stadium, Ndola',
-      homeWinProb: 32,
-      drawProb: 33,
-      awayWinProb: 35,
-      homeForm: 'W-D-W-L-L',
-      awayForm: 'L-W-W-W-W',
-      keyPlayer: 'Franck Kessié',
-    ),
-  ];
-
-  // --- JUMAMOSI: 14 NOVEMBA 2026 (MECHI ZA NBC TANZANIA & ULAYA) ---
-  static const List<MatchModel> _nov14Matches = [
-    // Ligi Kuu ya NBC (Tanzania Premier League)
-    MatchModel(
-      id: 'sch_14_1',
-      fixtureId: 201401,
-      leagueEn: 'NBC Premier League',
-      leagueSw: 'Ligi Kuu ya NBC (Tanzania)',
-      leagueLogo: '',
-      leagueCountry: 'Tanzania',
-      homeTeam: 'Simba SC',
-      awayTeam: 'Coastal Union',
-      homeTeamLogo: '',
-      awayTeamLogo: '',
-      homeScore: 0,
-      awayScore: 0,
-      matchTime: '16:00',
-      isLive: false,
-      statusShort: 'NS',
-      statusEn: 'Saturday, 16:00',
-      statusSw: 'Jumamosi, Saa 16:00',
-      venue: 'Benjamin Mkapa Stadium, Dar es Salaam',
-      referee: 'Jonesia Rukyaa, Tanzania',
-      homeColor: Color(0xFFE31B23),
-      awayColor: Color(0xFF0055A5),
-      homeWinProb: 65,
-      drawProb: 22,
-      awayWinProb: 13,
-      homeForm: 'W-W-D-W-W',
-      awayForm: 'D-L-W-D-L',
-      keyPlayer: 'Kibu Denis (Simba)',
-      h2hSummary: 'Mechi 6 zilizopita: Simba 5, Coastal Union 0, Sare 1',
-    ),
-    MatchModel(
-      id: 'sch_14_2',
-      fixtureId: 201402,
-      leagueEn: 'NBC Premier League',
-      leagueSw: 'Ligi Kuu ya NBC (Tanzania)',
-      leagueLogo: '',
-      leagueCountry: 'Tanzania',
-      homeTeam: 'Young Africans',
-      awayTeam: 'Kagera Sugar',
-      homeTeamLogo: '',
-      awayTeamLogo: '',
-      homeScore: 0,
-      awayScore: 0,
-      matchTime: '19:00',
-      isLive: false,
-      statusShort: 'NS',
-      statusEn: 'Saturday, 19:00',
-      statusSw: 'Jumamosi, Saa 19:00',
-      venue: 'Azam Complex, Chamazi',
-      referee: 'Ahmed Arajiga, Tanzania',
-      homeColor: Color(0xFF008000),
-      awayColor: Color(0xFFFFBF00),
-      homeWinProb: 74,
-      drawProb: 17,
-      awayWinProb: 9,
-      homeForm: 'W-W-W-W-D',
-      awayForm: 'L-D-L-W-L',
-      keyPlayer: 'Stephane Aziz Ki (Yanga)',
-      h2hSummary: 'Mechi 5 zilizopita: Yanga imeshinda zote 5',
-    ),
-    MatchModel(
-      id: 'sch_14_3',
-      fixtureId: 201403,
-      leagueEn: 'NBC Premier League',
-      leagueSw: 'Ligi Kuu ya NBC (Tanzania)',
-      leagueLogo: '',
-      leagueCountry: 'Tanzania',
-      homeTeam: 'Singida Black Stars',
-      awayTeam: 'Tabora United',
-      homeTeamLogo: '',
-      awayTeamLogo: '',
-      homeScore: 0,
-      awayScore: 0,
-      matchTime: '14:00',
-      isLive: false,
-      statusShort: 'NS',
-      statusEn: 'Saturday, 14:00',
-      statusSw: 'Jumamosi, Saa 14:00',
-      venue: 'Liti Stadium, Singida',
-      homeWinProb: 55,
-      drawProb: 28,
-      awayWinProb: 17,
-      homeForm: 'W-W-D-W-L',
-      awayForm: 'D-L-D-W-L',
-      keyPlayer: 'Elvis Rupia',
-    ),
-    // UEFA Nations League
-    MatchModel(
-      id: 'sch_14_4',
-      fixtureId: 201404,
-      leagueEn: 'UEFA Nations League',
-      leagueSw: 'UEFA Nations League',
-      leagueLogo: 'https://media.api-sports.io/football/leagues/5.png',
-      leagueCountry: 'World',
-      homeTeam: 'Germany',
-      awayTeam: 'Bosnia & Herzegovina',
-      homeTeamLogo: 'https://media.api-sports.io/football/teams/25.png',
-      awayTeamLogo: 'https://media.api-sports.io/football/teams/16.png',
-      homeScore: 0,
-      awayScore: 0,
-      matchTime: '22:45',
-      isLive: false,
-      statusShort: 'NS',
-      statusEn: 'Saturday, 22:45',
-      statusSw: 'Jumamosi, Saa 22:45',
-      venue: 'Europa-Park Stadion, Freiburg',
-      homeWinProb: 82,
-      drawProb: 12,
-      awayWinProb: 6,
-      homeForm: 'W-W-D-W-L',
-      awayForm: 'L-D-L-L-L',
-      keyPlayer: 'Florian Wirtz (Ujerumani)',
-      h2hSummary: 'Mechi 3 zilizopita: Ujerumani 3, Bosnia 0',
-    ),
-    MatchModel(
-      id: 'sch_14_5',
-      fixtureId: 201405,
-      leagueEn: 'UEFA Nations League',
-      leagueSw: 'UEFA Nations League',
-      leagueLogo: 'https://media.api-sports.io/football/leagues/5.png',
-      leagueCountry: 'World',
-      homeTeam: 'Netherlands',
-      awayTeam: 'Hungary',
-      homeTeamLogo: 'https://media.api-sports.io/football/teams/1118.png',
-      awayTeamLogo: 'https://media.api-sports.io/football/teams/771.png',
-      homeScore: 0,
-      awayScore: 0,
-      matchTime: '22:45',
-      isLive: false,
-      statusShort: 'NS',
-      statusEn: 'Saturday, 22:45',
-      statusSw: 'Jumamosi, Saa 22:45',
-      venue: 'Johan Cruyff Arena, Amsterdam',
-      homeWinProb: 67,
-      drawProb: 21,
-      awayWinProb: 12,
-      homeForm: 'L-D-D-W-L',
-      awayForm: 'W-D-D-L-L',
-      keyPlayer: 'Cody Gakpo (Uholanzi)',
-      h2hSummary: 'Mechi 6 zilizopita: Uholanzi 5, Sare 1',
-    ),
-    MatchModel(
-      id: 'sch_14_6',
-      fixtureId: 201406,
-      leagueEn: 'UEFA Nations League',
-      leagueSw: 'UEFA Nations League',
-      leagueLogo: 'https://media.api-sports.io/football/leagues/5.png',
-      leagueCountry: 'World',
-      homeTeam: 'Turkey',
-      awayTeam: 'Wales',
-      homeTeamLogo: 'https://media.api-sports.io/football/teams/773.png',
-      awayTeamLogo: 'https://media.api-sports.io/football/teams/767.png',
-      homeScore: 0,
-      awayScore: 0,
-      matchTime: '20:00',
-      isLive: false,
-      statusShort: 'NS',
-      statusEn: 'Saturday, 20:00',
-      statusSw: 'Jumamosi, Saa 20:00',
-      venue: 'Kadir Has Stadium, Kayseri',
-      homeWinProb: 56,
-      drawProb: 26,
-      awayWinProb: 18,
-      homeForm: 'W-W-W-D-L',
-      awayForm: 'W-D-W-D-L',
-      keyPlayer: 'Arda Güler (Uturuki)',
-    ),
-    MatchModel(
-      id: 'sch_14_7',
-      fixtureId: 201407,
-      leagueEn: 'UEFA Nations League',
-      leagueSw: 'UEFA Nations League',
-      leagueLogo: 'https://media.api-sports.io/football/leagues/5.png',
-      leagueCountry: 'World',
-      homeTeam: 'Sweden',
-      awayTeam: 'Slovakia',
-      homeTeamLogo: 'https://media.api-sports.io/football/teams/772.png',
-      awayTeamLogo: 'https://media.api-sports.io/football/teams/774.png',
-      homeScore: 0,
-      awayScore: 0,
-      matchTime: '22:45',
-      isLive: false,
-      statusShort: 'NS',
-      statusEn: 'Saturday, 22:45',
-      statusSw: 'Jumamosi, Saa 22:45',
-      venue: 'Strawberry Arena, Solna',
-      homeWinProb: 52,
-      drawProb: 27,
-      awayWinProb: 21,
-      homeForm: 'W-D-W-W-L',
-      awayForm: 'W-D-W-W-L',
-      keyPlayer: 'Viktor Gyökeres',
-    ),
-  ];
-
-  // --- JUMAPILI: 15 NOVEMBA 2026 ---
-  static const List<MatchModel> _nov15Matches = [
-    // Mechi Kubwa ya Dabi ya Ulaya: Italia vs Ufaransa
-    MatchModel(
-      id: 'sch_15_1',
-      fixtureId: 201501,
-      leagueEn: 'UEFA Nations League',
-      leagueSw: 'UEFA Nations League',
-      leagueLogo: 'https://media.api-sports.io/football/leagues/5.png',
-      leagueCountry: 'World',
-      homeTeam: 'Italy',
-      awayTeam: 'France',
-      homeTeamLogo: 'https://media.api-sports.io/football/teams/768.png',
-      awayTeamLogo: 'https://media.api-sports.io/football/teams/2.png',
-      homeScore: 0,
-      awayScore: 0,
-      matchTime: '22:45',
-      isLive: false,
-      statusShort: 'NS',
-      statusEn: 'Sunday, 22:45',
-      statusSw: 'Jumapili, Saa 22:45',
-      venue: 'San Siro Stadium, Milan',
-      referee: 'Slavko Vinčić, Slovenia',
-      homeWinProb: 37,
-      drawProb: 31,
-      awayWinProb: 32,
-      homeForm: 'W-D-W-W-D',
-      awayForm: 'W-W-W-D-W',
-      keyPlayer: 'Federico Dimarco vs Kylian Mbappé',
-      h2hSummary: 'Dabi ya Kifalme: Mechi 5 zilizopita: Ufaransa 3, Italia 2',
-    ),
-    MatchModel(
-      id: 'sch_15_2',
-      fixtureId: 201502,
-      leagueEn: 'UEFA Nations League',
-      leagueSw: 'UEFA Nations League',
-      leagueLogo: 'https://media.api-sports.io/football/leagues/5.png',
-      leagueCountry: 'World',
-      homeTeam: 'England',
-      awayTeam: 'Republic of Ireland',
-      homeTeamLogo: 'https://media.api-sports.io/football/teams/10.png',
-      awayTeamLogo: 'https://media.api-sports.io/football/teams/1108.png',
-      homeScore: 0,
-      awayScore: 0,
-      matchTime: '20:00',
-      isLive: false,
-      statusShort: 'NS',
-      statusEn: 'Sunday, 20:00',
-      statusSw: 'Jumapili, Saa 20:00',
-      venue: 'Wembley Stadium, London',
-      homeWinProb: 76,
-      drawProb: 16,
-      awayWinProb: 8,
-      homeForm: 'W-L-W-W-W',
-      awayForm: 'W-L-L-W-L',
-      keyPlayer: 'Jude Bellingham (Uingereza)',
-      h2hSummary: 'Mechi 4 zilizopita: Uingereza 3, Sare 1',
-    ),
-    MatchModel(
-      id: 'sch_15_3',
-      fixtureId: 201503,
-      leagueEn: 'UEFA Nations League',
-      leagueSw: 'UEFA Nations League',
-      leagueLogo: 'https://media.api-sports.io/football/leagues/5.png',
-      leagueCountry: 'World',
-      homeTeam: 'Norway',
-      awayTeam: 'Kazakhstan',
-      homeTeamLogo: 'https://media.api-sports.io/football/teams/1109.png',
-      awayTeamLogo: 'https://media.api-sports.io/football/teams/770.png',
-      homeScore: 0,
-      awayScore: 0,
-      matchTime: '20:00',
-      isLive: false,
-      statusShort: 'NS',
-      statusEn: 'Sunday, 20:00',
-      statusSw: 'Jumapili, Saa 20:00',
-      venue: 'Ullevaal Stadion, Oslo',
-      homeWinProb: 85,
-      drawProb: 10,
-      awayWinProb: 5,
-      homeForm: 'L-W-W-D-L',
-      awayForm: 'L-L-L-D-L',
-      keyPlayer: 'Erling Haaland (Norway)',
-    ),
-    // Ligi Kuu ya NBC (Tanzania)
-    MatchModel(
-      id: 'sch_15_4',
-      fixtureId: 201504,
-      leagueEn: 'NBC Premier League',
-      leagueSw: 'Ligi Kuu ya NBC (Tanzania)',
-      leagueLogo: '',
-      leagueCountry: 'Tanzania',
-      homeTeam: 'Azam FC',
-      awayTeam: 'KenGold FC',
-      homeTeamLogo: '',
-      awayTeamLogo: '',
-      homeScore: 0,
-      awayScore: 0,
-      matchTime: '19:00',
-      isLive: false,
-      statusShort: 'NS',
-      statusEn: 'Sunday, 19:00',
-      statusSw: 'Jumapili, Saa 19:00',
-      venue: 'Azam Complex, Chamazi',
-      homeColor: Color(0xFF003399),
-      awayColor: Color(0xFF222222),
-      homeWinProb: 75,
-      drawProb: 17,
-      awayWinProb: 8,
-      homeForm: 'W-W-D-W-W',
-      awayForm: 'L-L-D-L-W',
-      keyPlayer: 'Feisal Salum (Fei Toto)',
-    ),
-    MatchModel(
-      id: 'sch_15_5',
-      fixtureId: 201505,
-      leagueEn: 'NBC Premier League',
-      leagueSw: 'Ligi Kuu ya NBC (Tanzania)',
-      leagueLogo: '',
-      leagueCountry: 'Tanzania',
-      homeTeam: 'JKT Tanzania',
-      awayTeam: 'KMC FC',
-      homeTeamLogo: '',
-      awayTeamLogo: '',
-      homeScore: 0,
-      awayScore: 0,
-      matchTime: '16:00',
-      isLive: false,
-      statusShort: 'NS',
-      statusEn: 'Sunday, 16:00',
-      statusSw: 'Jumapili, Saa 16:00',
-      venue: 'Major General Isamuhyo Stadium',
-      homeWinProb: 39,
-      drawProb: 34,
-      awayWinProb: 27,
-      homeForm: 'D-W-L-D-W',
-      awayForm: 'L-D-W-L-D',
-    ),
-  ];
-
-  // --- JUMATATU: 16 NOVEMBA 2026 ---
-  static const List<MatchModel> _nov16Matches = [
-    MatchModel(
-      id: 'sch_16_1',
-      fixtureId: 201601,
-      leagueEn: 'UEFA Nations League',
-      leagueSw: 'UEFA Nations League',
-      leagueLogo: 'https://media.api-sports.io/football/leagues/5.png',
-      leagueCountry: 'World',
-      homeTeam: 'Spain',
-      awayTeam: 'Switzerland',
-      homeTeamLogo: 'https://media.api-sports.io/football/teams/9.png',
-      awayTeamLogo: 'https://media.api-sports.io/football/teams/15.png',
-      homeScore: 0,
-      awayScore: 0,
-      matchTime: '22:45',
-      isLive: false,
-      statusShort: 'NS',
-      statusEn: 'Monday, 22:45',
-      statusSw: 'Jumatatu, Saa 22:45',
-      venue: 'Estadio Heliodoro Rodríguez López, Tenerife',
-      homeWinProb: 68,
-      drawProb: 20,
-      awayWinProb: 12,
-      homeForm: 'W-W-W-W-D',
-      awayForm: 'D-L-L-L-D',
-      keyPlayer: 'Pedri (Hispania)',
-    ),
-    MatchModel(
-      id: 'sch_16_2',
-      fixtureId: 201602,
-      leagueEn: 'UEFA Nations League',
-      leagueSw: 'UEFA Nations League',
-      leagueLogo: 'https://media.api-sports.io/football/leagues/5.png',
-      leagueCountry: 'World',
-      homeTeam: 'Croatia',
-      awayTeam: 'Portugal',
-      homeTeamLogo: 'https://media.api-sports.io/football/teams/3.png',
-      awayTeamLogo: 'https://media.api-sports.io/football/teams/27.png',
-      homeScore: 0,
-      awayScore: 0,
-      matchTime: '22:45',
-      isLive: false,
-      statusShort: 'NS',
-      statusEn: 'Monday, 22:45',
-      statusSw: 'Jumatatu, Saa 22:45',
-      venue: 'Stadion Poljud, Split',
-      homeWinProb: 33,
-      drawProb: 31,
-      awayWinProb: 36,
-      homeForm: 'D-W-W-L-D',
-      awayForm: 'D-W-W-W-W',
-      keyPlayer: 'Luka Modrić vs Bruno Fernandes',
-      h2hSummary: 'Dabi ya miamba: Ureno 4, Croatia 1, Sare 2',
-    ),
-  ];
-
-  // --- JUMANNE: 17 NOVEMBA 2026 ---
-  static const List<MatchModel> _nov17Matches = [
-    // UEFA Nations League
-    MatchModel(
-      id: 'sch_17_1',
-      fixtureId: 201701,
-      leagueEn: 'UEFA Nations League',
-      leagueSw: 'UEFA Nations League',
-      leagueLogo: 'https://media.api-sports.io/football/leagues/5.png',
-      leagueCountry: 'World',
-      homeTeam: 'Poland',
-      awayTeam: 'Scotland',
-      homeTeamLogo: 'https://media.api-sports.io/football/teams/24.png',
-      awayTeamLogo: 'https://media.api-sports.io/football/teams/1105.png',
-      homeScore: 0,
-      awayScore: 0,
-      matchTime: '22:45',
-      isLive: false,
-      statusShort: 'NS',
-      statusEn: 'Tuesday, 22:45',
-      statusSw: 'Jumanne, Saa 22:45',
-      venue: 'PGE Narodowy, Warsaw',
-      homeWinProb: 49,
-      drawProb: 28,
-      awayWinProb: 23,
-      homeForm: 'D-L-L-W-L',
-      awayForm: 'L-L-D-L-W',
-      keyPlayer: 'Robert Lewandowski',
-      h2hSummary: 'Mechi 3 zilizopita: Poland 2, Sare 1',
-    ),
-    MatchModel(
-      id: 'sch_17_2',
-      fixtureId: 201702,
-      leagueEn: 'UEFA Nations League',
-      leagueSw: 'UEFA Nations League',
-      leagueLogo: 'https://media.api-sports.io/football/leagues/5.png',
-      leagueCountry: 'World',
-      homeTeam: 'Serbia',
-      awayTeam: 'Denmark',
-      homeTeamLogo: 'https://media.api-sports.io/football/teams/14.png',
-      awayTeamLogo: 'https://media.api-sports.io/football/teams/21.png',
-      homeScore: 0,
-      awayScore: 0,
-      matchTime: '22:45',
-      isLive: false,
-      statusShort: 'NS',
-      statusEn: 'Tuesday, 22:45',
-      statusSw: 'Jumanne, Saa 22:45',
-      venue: 'Dubočica Stadium, Leskovac',
-      homeWinProb: 37,
-      drawProb: 32,
-      awayWinProb: 31,
-      homeForm: 'D-W-L-D-L',
-      awayForm: 'D-L-W-W-L',
-      keyPlayer: 'Aleksandar Mitrović',
-    ),
-    MatchModel(
-      id: 'sch_17_3',
-      fixtureId: 201703,
-      leagueEn: 'UEFA Nations League',
-      leagueSw: 'UEFA Nations League',
-      leagueLogo: 'https://media.api-sports.io/football/leagues/5.png',
-      leagueCountry: 'World',
-      homeTeam: 'Hungary',
-      awayTeam: 'Germany',
-      homeTeamLogo: 'https://media.api-sports.io/football/teams/771.png',
-      awayTeamLogo: 'https://media.api-sports.io/football/teams/25.png',
-      homeScore: 0,
-      awayScore: 0,
-      matchTime: '22:45',
-      isLive: false,
-      statusShort: 'NS',
-      statusEn: 'Tuesday, 22:45',
-      statusSw: 'Jumanne, Saa 22:45',
-      venue: 'Puskás Aréna, Budapest',
-      homeWinProb: 18,
-      drawProb: 24,
-      awayWinProb: 58,
-      homeForm: 'W-D-L-D-L',
-      awayForm: 'W-W-D-W-W',
-      keyPlayer: 'Jamal Musiala (Ujerumani)',
-      h2hSummary: 'Mechi 4 zilizopita: Ujerumani 2, Sare 1, Hungary 1',
-    ),
-    // Ligi Kuu ya NBC (Tanzania)
-    MatchModel(
-      id: 'sch_17_4',
-      fixtureId: 201704,
-      leagueEn: 'NBC Premier League',
-      leagueSw: 'Ligi Kuu ya NBC (Tanzania)',
-      leagueLogo: '',
-      leagueCountry: 'Tanzania',
-      homeTeam: 'Dodoma Jiji FC',
-      awayTeam: 'Tabora United',
-      homeTeamLogo: '',
-      awayTeamLogo: '',
-      homeScore: 0,
-      awayScore: 0,
-      matchTime: '16:00',
-      isLive: false,
-      statusShort: 'NS',
-      statusEn: 'Tuesday, 16:00',
-      statusSw: 'Jumanne, Saa 16:00',
-      venue: 'Jamhuri Stadium, Dodoma',
-      homeColor: Color(0xFF673AB7),
-      awayColor: Color(0xFFFF5722),
-      homeWinProb: 41,
-      drawProb: 33,
-      awayWinProb: 26,
-      homeForm: 'D-W-L-D-D',
-      awayForm: 'L-D-W-L-L',
-    ),
-    MatchModel(
-      id: 'sch_17_5',
-      fixtureId: 201705,
-      leagueEn: 'NBC Premier League',
-      leagueSw: 'Ligi Kuu ya NBC (Tanzania)',
-      leagueLogo: '',
-      leagueCountry: 'Tanzania',
-      homeTeam: 'Kagera Sugar',
-      awayTeam: 'Coastal Union',
-      homeTeamLogo: '',
-      awayTeamLogo: '',
-      homeScore: 0,
-      awayScore: 0,
-      matchTime: '19:00',
-      isLive: false,
-      statusShort: 'NS',
-      statusEn: 'Tuesday, 19:00',
-      statusSw: 'Jumanne, Saa 19:00',
-      venue: 'Kaitaba Stadium, Bukoba',
-      homeColor: Color(0xFFE91E63),
-      awayColor: Color(0xFF009688),
-      homeWinProb: 38,
-      drawProb: 34,
-      awayWinProb: 28,
-      homeForm: 'L-D-W-L-D',
-      awayForm: 'D-L-L-W-D',
-    ),
-  ];
 }
