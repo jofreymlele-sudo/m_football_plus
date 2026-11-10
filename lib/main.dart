@@ -3,6 +3,8 @@ import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'api_service.dart';
 import 'matches_screen.dart';
+import 'standings_screen.dart';
+import 'news_screen.dart';
 
 // ============================================================================
 // 0. ENTRY POINT YA FLUTTER (MAIN FUNCTION & APP ROOT)
@@ -35,8 +37,7 @@ class MFootballPlusApp extends StatelessWidget {
           primary: MColors.scoresCyan,
           secondary: MColors.highlightsGold,
           surface: MColors.surface,
-          background: MColors.background,
-          onBackground: MColors.textWhite,
+          onSurface: MColors.textWhite,
         ),
         useMaterial3: true,
       ),
@@ -469,6 +470,18 @@ class _MFootballPlusHomePageState extends State<MFootballPlusHomePage> {
       case 1:
         // Ukurasa kamili wa Mechi za Leo na Zinazofuata (MatchesScreen)
         return MatchesScreen(
+          isSwahili: isSwahili,
+          onBackToHome: () => setState(() => _currentIndex = 0),
+        );
+      case 2:
+        // Ukurasa wa Msimamo wa Ligi (StandingsScreen)
+        return StandingsScreen(
+          isSwahili: isSwahili,
+          onBackToHome: () => setState(() => _currentIndex = 0),
+        );
+      case 3:
+        // Ukurasa wa Habari za Soka (NewsScreen)
+        return NewsScreen(
           isSwahili: isSwahili,
           onBackToHome: () => setState(() => _currentIndex = 0),
         );

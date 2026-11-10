@@ -668,120 +668,137 @@ Pakua M Football Plus kupata matokeo mubashara na takwimu zote!''';
   }
 
   // ============================================================================
-  // 3. MCHIRIZI WA TAREHE (DATE CAROUSEL: 10 DAYS NOV 8 - NOV 17)
+  // 3. MCHIRIZI WA TAREHE (DATE SELECTOR: SIKU 3 ZA UHAKIKA - JANA, LEO, KESHO)
   // ============================================================================
   Widget _buildDateCarousel(bool isSw) {
     final now = DateTime.now();
-    // Onyesha siku 10 kamili: Siku 2 zilizopita, Leo, na siku 7 zinazofuata (hadi 17 Nov)
-    final days = List.generate(10, (i) => now.add(Duration(days: i - 2)));
+    final days = [
+      now.subtract(const Duration(days: 1)),
+      now,
+      now.add(const Duration(days: 1)),
+    ];
+
+    final monthNamesSw = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Ago', 'Sep', 'Okt', 'Nov', 'Des'];
+    final monthNamesEn = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
     return Container(
-      height: 68,
-      margin: const EdgeInsets.symmetric(vertical: 4),
-      child: ListView.builder(
-        scrollDirection: Axis.horizontal,
-        physics: const BouncingScrollPhysics(),
-        padding: const EdgeInsets.symmetric(horizontal: 16),
-        itemCount: days.length,
-        itemBuilder: (context, index) {
-          final day = days[index];
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      child: Row(
+        children: days.map((day) {
           final isSelected = day.year == _selectedDate.year &&
               day.month == _selectedDate.month &&
               day.day == _selectedDate.day;
           final isTodayDate = _isToday(day);
 
           String dayLabel;
+          String subLabel;
           if (isTodayDate) {
             dayLabel = isSw ? 'LEO' : 'TODAY';
-          } else if (day.day == now.subtract(const Duration(days: 1)).day && day.month == now.month) {
+            subLabel = isSw ? 'Mubashara' : 'Live & Sched';
+          } else if (day.isBefore(now)) {
             dayLabel = isSw ? 'JANA' : 'YEST';
-          } else if (day.day == now.add(const Duration(days: 1)).day && day.month == now.month) {
-            dayLabel = isSw ? 'KESHO' : 'TOM';
+            subLabel = isSw ? 'Matokeo' : 'Results';
           } else {
-            final weekdaysSw = ['JTT', 'JNN', 'JTN', 'ALH', 'IJM', 'JMS', 'JPL'];
-            final weekdaysEn = ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN'];
-            dayLabel = isSw ? weekdaysSw[day.weekday - 1] : weekdaysEn[day.weekday - 1];
+            dayLabel = isSw ? 'KESHO' : 'TOM';
+            subLabel = isSw ? 'Ratiba' : 'Upcoming';
           }
 
-          final monthNamesSw = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Ago', 'Sep', 'Okt', 'Nov', 'Des'];
-          final monthNamesEn = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
           final monthLabel = isSw ? monthNamesSw[day.month - 1] : monthNamesEn[day.month - 1];
 
-          return GestureDetector(
-            onTap: () {
-              if (!isSelected) {
-                setState(() {
-                  _selectedDate = day;
-                });
-                _loadMatchesFromApi();
-              }
-            },
-            child: AnimatedContainer(
-              duration: const Duration(milliseconds: 200),
-              width: 60,
-              margin: const EdgeInsets.only(right: 8),
-              decoration: BoxDecoration(
-                color: isSelected
-                    ? MColors.scoresCyan.withValues(alpha: 0.18)
-                    : MColors.surface,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(
+          return Expanded(
+            child: GestureDetector(
+              onTap: () {
+                if (!isSelected) {
+                  setState(() {
+                    _selectedDate = day;
+                  });
+                  _loadMatchesFromApi();
+                }
+              },
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 200),
+                margin: const EdgeInsets.symmetric(horizontal: 4),
+                padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 6),
+                decoration: BoxDecoration(
                   color: isSelected
-                      ? MColors.scoresCyan
-                      : (isTodayDate
-                          ? MColors.highlightsGold.withValues(alpha: 0.7)
-                          : MColors.scoresCyan.withValues(alpha: 0.15)),
-                  width: isSelected ? 1.8 : 1,
+                      ? MColors.scoresCyan.withValues(alpha: 0.16)
+                      : MColors.surface,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: isSelected
+                        ? MColors.scoresCyan
+                        : (isTodayDate
+                            ? MColors.highlightsGold.withValues(alpha: 0.6)
+                            : MColors.scoresCyan.withValues(alpha: 0.15)),
+                    width: isSelected ? 1.8 : 1,
+                  ),
+                  boxShadow: isSelected
+                      ? [
+                          BoxShadow(
+                            color: MColors.scoresCyan.withValues(alpha: 0.25),
+                            blurRadius: 10,
+                            offset: const Offset(0, 2),
+                          ),
+                        ]
+                      : null,
                 ),
-                boxShadow: isSelected
-                    ? [
-                        BoxShadow(
-                          color: MColors.scoresCyan.withValues(alpha: 0.3),
-                          blurRadius: 8,
-                          offset: const Offset(0, 2),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        if (isTodayDate) ...[
+                          Container(
+                            width: 6,
+                            height: 6,
+                            margin: const EdgeInsets.only(right: 4),
+                            decoration: const BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: MColors.highlightsGold,
+                            ),
+                          ),
+                        ],
+                        Text(
+                          dayLabel,
+                          style: GoogleFonts.manrope(
+                            fontSize: 11,
+                            fontWeight: isSelected ? FontWeight.w800 : FontWeight.w700,
+                            color: isSelected
+                                ? MColors.scoresCyan
+                                : (isTodayDate
+                                    ? MColors.highlightsGold
+                                    : MColors.textWhite.withValues(alpha: 0.8)),
+                          ),
                         ),
-                      ]
-                    : null,
-              ),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Text(
-                    dayLabel,
-                    style: GoogleFonts.manrope(
-                      fontSize: 10,
-                      fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
-                      color: isSelected
-                          ? MColors.scoresCyan
-                          : (isTodayDate
-                              ? MColors.highlightsGold
-                              : MColors.textWhite.withValues(alpha: 0.7)),
+                      ],
                     ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    '${day.day}',
-                    style: GoogleFonts.outfit(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      color: isSelected ? MColors.scoresCyan : MColors.textWhite,
+                    const SizedBox(height: 2),
+                    Text(
+                      '${day.day} $monthLabel',
+                      style: GoogleFonts.outfit(
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                        color: isSelected ? MColors.scoresCyan : MColors.textWhite,
+                      ),
                     ),
-                  ),
-                  Text(
-                    monthLabel,
-                    style: GoogleFonts.manrope(
-                      fontSize: 9,
-                      fontWeight: FontWeight.w600,
-                      color: isSelected
-                          ? MColors.scoresCyan.withValues(alpha: 0.8)
-                          : MColors.textWhite.withValues(alpha: 0.45),
+                    const SizedBox(height: 2),
+                    Text(
+                      subLabel,
+                      style: GoogleFonts.manrope(
+                        fontSize: 9.5,
+                        fontWeight: FontWeight.w600,
+                        color: isSelected
+                            ? MColors.scoresCyan.withValues(alpha: 0.85)
+                            : MColors.textWhite.withValues(alpha: 0.45),
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
           );
-        },
+        }).toList(),
       ),
     );
   }
@@ -1361,10 +1378,10 @@ Pakua M Football Plus kupata matokeo mubashara na takwimu zote!''';
   }
 
   // Nembo ya Timu yenye Fallback ya Soka
-  Widget _buildTeamBadge(String logoUrl, String teamName) {
+  Widget _buildTeamBadge(String logoUrl, String teamName, {double size = 28}) {
     return Container(
-      width: 28,
-      height: 28,
+      width: size,
+      height: size,
       decoration: BoxDecoration(
         shape: BoxShape.circle,
         color: MColors.background,
@@ -1378,12 +1395,12 @@ Pakua M Football Plus kupata matokeo mubashara na takwimu zote!''';
           ? Image.network(
               logoUrl,
               fit: BoxFit.contain,
-              errorBuilder: (_, __, ___) => const Center(
-                child: Icon(Icons.sports_soccer, size: 15, color: MColors.textWhite),
+              errorBuilder: (_, __, ___) => Center(
+                child: Icon(Icons.sports_soccer, size: size * 0.55, color: MColors.textWhite),
               ),
             )
-          : const Center(
-              child: Icon(Icons.sports_soccer, size: 15, color: MColors.textWhite),
+          : Center(
+              child: Icon(Icons.sports_soccer, size: size * 0.55, color: MColors.textWhite),
             ),
     );
   }
@@ -1664,398 +1681,1008 @@ Pakua M Football Plus kupata matokeo mubashara na takwimu zote!''';
   // 6. TAARIFA ZA ZIADA NA UTABIRI WA AI (MODAL BOTTOM SHEET)
   // ============================================================================
   void _showMatchDetailsModal(MatchModel match, bool isSw) {
-    final isReminderSet = _reminderMatchIds.contains(match.id);
-
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
       isScrollControlled: true,
       builder: (context) {
-        return Container(
-          decoration: const BoxDecoration(
-            color: MColors.surface,
-            borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-            border: Border(
-              top: BorderSide(color: MColors.scoresCyan, width: 1.5),
-            ),
-          ),
-          padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
-          child: SingleChildScrollView(
-            physics: const BouncingScrollPhysics(),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                // Handle bar
-                Container(
-                  width: 38,
-                  height: 4,
-                  margin: const EdgeInsets.only(bottom: 14),
-                  decoration: BoxDecoration(
-                    color: MColors.textWhite.withValues(alpha: 0.3),
-                    borderRadius: BorderRadius.circular(2),
-                  ),
-                ),
-
-                // League Name & Country
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    if (match.leagueLogo.isNotEmpty) ...[
-                      Image.network(
-                        match.leagueLogo,
-                        width: 18,
-                        height: 18,
-                        errorBuilder: (_, __, ___) => const SizedBox.shrink(),
-                      ),
-                      const SizedBox(width: 6),
-                    ],
-                    Flexible(
-                      child: Text(
-                        match.getLeague(isSw),
-                        textAlign: TextAlign.center,
-                        style: GoogleFonts.outfit(
-                          fontSize: 15,
-                          fontWeight: FontWeight.bold,
-                          color: MColors.highlightsGold,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 14),
-
-                // Teams & Score Row
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                  children: [
-                    // Home Team
-                    Expanded(
-                      child: Column(
-                        children: [
-                          _buildTeamBadge(match.homeTeamLogo, match.homeTeam),
-                          const SizedBox(height: 6),
-                          Text(
-                            match.homeTeam,
-                            textAlign: TextAlign.center,
-                            style: GoogleFonts.outfit(
-                              fontSize: 14,
-                              fontWeight: FontWeight.bold,
-                              color: MColors.textWhite,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-
-                    // Center Score / VS
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                      decoration: BoxDecoration(
-                        color: MColors.background,
-                        borderRadius: BorderRadius.circular(10),
-                        border: Border.all(color: MColors.scoresCyan.withValues(alpha: 0.4)),
-                      ),
-                      child: Text(
-                        match.isLive || match.homeScore > 0 || match.awayScore > 0
-                            ? '${match.homeScore} - ${match.awayScore}'
-                            : 'VS',
-                        style: GoogleFonts.outfit(
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
-                          color: MColors.scoresCyan,
-                        ),
-                      ),
-                    ),
-
-                    // Away Team
-                    Expanded(
-                      child: Column(
-                        children: [
-                          _buildTeamBadge(match.awayTeamLogo, match.awayTeam),
-                          const SizedBox(height: 6),
-                          Text(
-                            match.awayTeam,
-                            textAlign: TextAlign.center,
-                            style: GoogleFonts.outfit(
-                              fontSize: 14,
-                              fontWeight: FontWeight.bold,
-                              color: MColors.textWhite,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-
-                const SizedBox(height: 16),
-
-                // ================================================================
-                // KIPENGELE CHA KIPEKEE: UTABIRI WA MATOKEO WA AI (AI PREDICTION)
-                // ================================================================
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: MColors.background,
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(
-                      color: MColors.scoresCyan.withValues(alpha: 0.25),
-                      width: 1,
-                    ),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          const Icon(Icons.auto_awesome, size: 14, color: MColors.highlightsGold),
-                          const SizedBox(width: 6),
-                          Text(
-                            isSw ? 'Utabiri wa Ushindi wa AI' : 'AI Win Probability',
-                            style: GoogleFonts.outfit(
-                              fontSize: 12.5,
-                              fontWeight: FontWeight.bold,
-                              color: MColors.highlightsGold,
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 10),
-
-                      // Probability Percentages
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text(
-                            '${match.homeTeam}: ${match.homeWinProb}%',
-                            style: GoogleFonts.manrope(
-                              fontSize: 11,
-                              fontWeight: FontWeight.w700,
-                              color: MColors.scoresCyan,
-                            ),
-                          ),
-                          Text(
-                            '${isSw ? 'Sare' : 'Draw'}: ${match.drawProb}%',
-                            style: GoogleFonts.manrope(
-                              fontSize: 11,
-                              fontWeight: FontWeight.w600,
-                              color: MColors.textWhite.withValues(alpha: 0.6),
-                            ),
-                          ),
-                          Text(
-                            '${match.awayTeam}: ${match.awayWinProb}%',
-                            style: GoogleFonts.manrope(
-                              fontSize: 11,
-                              fontWeight: FontWeight.w700,
-                              color: MColors.highlightsGold,
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 6),
-
-                      // Segmented Probability Bar
-                      ClipRRect(
-                        borderRadius: BorderRadius.circular(6),
-                        child: SizedBox(
-                          height: 7,
-                          child: Row(
-                            children: [
-                              Expanded(
-                                flex: match.homeWinProb > 0 ? match.homeWinProb : 1,
-                                child: Container(color: MColors.scoresCyan),
-                              ),
-                              const SizedBox(width: 2),
-                              Expanded(
-                                flex: match.drawProb > 0 ? match.drawProb : 1,
-                                child: Container(color: Colors.white38),
-                              ),
-                              const SizedBox(width: 2),
-                              Expanded(
-                                flex: match.awayWinProb > 0 ? match.awayWinProb : 1,
-                                child: Container(color: MColors.highlightsGold),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-
-                      // Form Guide (Mwenendo wa Mechi za Hivi Karibuni)
-                      const SizedBox(height: 10),
-                      const Divider(color: Color(0x1AFFFFFF), height: 1),
-                      const SizedBox(height: 8),
-
-                      Text(
-                        isSw ? 'Mwenendo wa Mechi 5 Zilizopita:' : 'Recent Form (Last 5):',
-                        style: GoogleFonts.manrope(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w600,
-                          color: MColors.textWhite.withValues(alpha: 0.55),
-                        ),
-                      ),
-                      const SizedBox(height: 6),
-                      _buildFormGuideRow(match.homeTeam, match.homeForm),
-                      const SizedBox(height: 4),
-                      _buildFormGuideRow(match.awayTeam, match.awayForm),
-                    ],
-                  ),
-                ),
-
-                const SizedBox(height: 14),
-
-                // Match Information List
-                _buildModalInfoRow(
-                  Icons.access_time_rounded,
-                  isSw ? 'Muda / Hali:' : 'Time / Status:',
-                  '${match.matchTime} (${match.getStatus(isSw)})',
-                ),
-                const SizedBox(height: 8),
-                _buildModalInfoRow(
-                  Icons.stadium_outlined,
-                  isSw ? 'Uwanja:' : 'Venue:',
-                  match.venue.isNotEmpty ? match.venue : (isSw ? 'Uwanja wa Kimataifa' : 'Main Stadium'),
-                ),
-                if (match.keyPlayer != null && match.keyPlayer!.isNotEmpty) ...[
-                  const SizedBox(height: 8),
-                  _buildModalInfoRow(
-                    Icons.star_outline_rounded,
-                    isSw ? 'Mchezaji wa Kuchunguzwa:' : 'Key Player:',
-                    match.keyPlayer!,
-                  ),
-                ],
-                if (match.h2hSummary != null && match.h2hSummary!.isNotEmpty) ...[
-                  const SizedBox(height: 8),
-                  _buildModalInfoRow(
-                    Icons.history_rounded,
-                    isSw ? 'Historia ya Dabi:' : 'Head to Head:',
-                    match.h2hSummary!,
-                  ),
-                ],
-                if (match.referee != null && match.referee!.isNotEmpty) ...[
-                  const SizedBox(height: 8),
-                  _buildModalInfoRow(
-                    Icons.person_pin_outlined,
-                    isSw ? 'Mwamuzi:' : 'Referee:',
-                    match.referee!,
-                  ),
-                ],
-
-                const SizedBox(height: 18),
-
-                // Action Buttons: Reminder & Share
-                Row(
-                  children: [
-                    // Reminder Toggle Button
-                    Expanded(
-                      child: OutlinedButton.icon(
-                        style: OutlinedButton.styleFrom(
-                          side: BorderSide(
-                            color: isReminderSet ? MColors.highlightsGold : MColors.scoresCyan.withValues(alpha: 0.5),
-                          ),
-                          backgroundColor: isReminderSet ? MColors.highlightsGold.withValues(alpha: 0.15) : null,
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                          padding: const EdgeInsets.symmetric(vertical: 10),
-                        ),
-                        onPressed: () {
-                          Navigator.pop(context);
-                          _toggleReminder(match, isSw);
-                        },
-                        icon: Icon(
-                          isReminderSet ? Icons.notifications_active_rounded : Icons.notifications_none_rounded,
-                          size: 16,
-                          color: isReminderSet ? MColors.highlightsGold : MColors.scoresCyan,
-                        ),
-                        label: Text(
-                          isReminderSet
-                              ? (isSw ? 'Ondoa Kikumbusho' : 'Remove Alert')
-                              : (isSw ? 'Kikumbusho' : 'Remind Me'),
-                          style: GoogleFonts.manrope(
-                            fontSize: 12,
-                            fontWeight: FontWeight.bold,
-                            color: isReminderSet ? MColors.highlightsGold : MColors.textWhite,
-                          ),
-                        ),
-                      ),
-                    ),
-
-                    const SizedBox(width: 10),
-
-                    // Share Match Button
-                    Expanded(
-                      child: ElevatedButton.icon(
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: MColors.scoresCyan,
-                          foregroundColor: MColors.background,
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                          padding: const EdgeInsets.symmetric(vertical: 10),
-                        ),
-                        onPressed: () => _shareMatchDetails(match, isSw),
-                        icon: const Icon(Icons.share_rounded, size: 16),
-                        label: Text(
-                          isSw ? 'Shiriki Mechi' : 'Share Match',
-                          style: GoogleFonts.outfit(
-                            fontSize: 12,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
+        return _MatchCenterModalSheet(
+          match: match,
+          isSw: isSw,
+          isReminderSet: _reminderMatchIds.contains(match.id),
+          onToggleReminder: () => _toggleReminder(match, isSw),
+          onShareMatch: () => _shareMatchDetails(match, isSw),
+          buildTeamBadge: _buildTeamBadge,
         );
       },
     );
   }
 
-  // Row ya Mwenendo wa Mechi (Form Guide Row W/D/L)
-  Widget _buildFormGuideRow(String teamName, String form) {
-    final letters = form.split('-');
+}
 
+// ============================================================================
+// MODAL SHEET YA KIPEKEE YA MECHI (MATCH CENTER: STATS, LINEUPS, H2H & PREDICTIONS)
+// ============================================================================
+class _MatchCenterModalSheet extends StatefulWidget {
+  final MatchModel match;
+  final bool isSw;
+  final bool isReminderSet;
+  final VoidCallback onToggleReminder;
+  final VoidCallback onShareMatch;
+  final Widget Function(String logoUrl, String teamName, {double size}) buildTeamBadge;
+
+  const _MatchCenterModalSheet({
+    required this.match,
+    required this.isSw,
+    required this.isReminderSet,
+    required this.onToggleReminder,
+    required this.onShareMatch,
+    required this.buildTeamBadge,
+  });
+
+  @override
+  State<_MatchCenterModalSheet> createState() => _MatchCenterModalSheetState();
+}
+
+class _MatchCenterModalSheetState extends State<_MatchCenterModalSheet> {
+  int _activeTab = 0; // 0 = Takwimu, 1 = Vikosi, 2 = H2H, 3 = Utabiri
+
+  List<FixtureTeamStats> _stats = [];
+  bool _statsLoading = false;
+
+  List<FixtureLineupModel> _lineups = [];
+  bool _lineupsLoading = false;
+
+  List<MatchModel> _h2h = [];
+  bool _h2hLoading = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchDetails();
+  }
+
+  void _fetchDetails() {
+    final fId = widget.match.fixtureId;
+    if (fId > 0) {
+      _statsLoading = true;
+      _lineupsLoading = true;
+      FootballApiService().getFixtureStatistics(fId).then((data) {
+        if (mounted) setState(() { _stats = data; _statsLoading = false; });
+      });
+      FootballApiService().getFixtureLineups(fId).then((data) {
+        if (mounted) setState(() { _lineups = data; _lineupsLoading = false; });
+      });
+    }
+
+    if (widget.match.homeTeamId > 0 && widget.match.awayTeamId > 0) {
+      _h2hLoading = true;
+      FootballApiService().getHeadToHead(widget.match.homeTeamId, widget.match.awayTeamId).then((data) {
+        if (mounted) setState(() { _h2h = data; _h2hLoading = false; });
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final m = widget.match;
+    final isSw = widget.isSw;
+
+    return Container(
+      constraints: BoxConstraints(
+        maxHeight: MediaQuery.of(context).size.height * 0.88,
+      ),
+      decoration: const BoxDecoration(
+        color: MColors.surface,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(22)),
+        border: Border(
+          top: BorderSide(color: MColors.scoresCyan, width: 1.6),
+        ),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // 1. Drag Handle
+          Container(
+            width: 40,
+            height: 4,
+            margin: const EdgeInsets.symmetric(vertical: 10),
+            decoration: BoxDecoration(
+              color: MColors.textWhite.withValues(alpha: 0.3),
+              borderRadius: BorderRadius.circular(2),
+            ),
+          ),
+
+          // 2. League Header
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                if (m.leagueLogo.isNotEmpty) ...[
+                  Image.network(
+                    m.leagueLogo,
+                    width: 18,
+                    height: 18,
+                    errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+                  ),
+                  const SizedBox(width: 6),
+                ],
+                Flexible(
+                  child: Text(
+                    m.getLeague(isSw),
+                    textAlign: TextAlign.center,
+                    overflow: TextOverflow.ellipsis,
+                    style: GoogleFonts.outfit(
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold,
+                      color: MColors.highlightsGold,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 12),
+
+          // 3. Scoreboard & Teams
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: [
+                // Home Team
+                Expanded(
+                  child: Column(
+                    children: [
+                      widget.buildTeamBadge(m.homeTeamLogo, m.homeTeam, size: 44),
+                      const SizedBox(height: 6),
+                      Text(
+                        m.homeTeam,
+                        textAlign: TextAlign.center,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: GoogleFonts.outfit(
+                          fontSize: 13,
+                          fontWeight: FontWeight.bold,
+                          color: MColors.textWhite,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
+                // Center Score / Status
+                Container(
+                  margin: const EdgeInsets.symmetric(horizontal: 8),
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: MColors.background,
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(
+                      color: m.isLive ? Colors.redAccent : MColors.scoresCyan.withValues(alpha: 0.4),
+                      width: 1.2,
+                    ),
+                  ),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        (m.isLive || m.homeScore > 0 || m.awayScore > 0)
+                            ? '${m.homeScore} - ${m.awayScore}'
+                            : (m.matchTime.isNotEmpty ? m.matchTime : 'VS'),
+                        style: GoogleFonts.outfit(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                          color: m.isLive ? Colors.redAccent : MColors.scoresCyan,
+                        ),
+                      ),
+                      Text(
+                        m.getStatus(isSw),
+                        style: GoogleFonts.manrope(
+                          fontSize: 10,
+                          fontWeight: FontWeight.w700,
+                          color: m.isLive ? Colors.redAccent : MColors.highlightsGold,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
+                // Away Team
+                Expanded(
+                  child: Column(
+                    children: [
+                      widget.buildTeamBadge(m.awayTeamLogo, m.awayTeam, size: 44),
+                      const SizedBox(height: 6),
+                      Text(
+                        m.awayTeam,
+                        textAlign: TextAlign.center,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: GoogleFonts.outfit(
+                          fontSize: 13,
+                          fontWeight: FontWeight.bold,
+                          color: MColors.textWhite,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 14),
+
+          // 4. Segmented Control Tabs (Takwimu, Vikosi, H2H, Utabiri)
+          Container(
+            height: 38,
+            margin: const EdgeInsets.symmetric(horizontal: 16),
+            padding: const EdgeInsets.all(3),
+            decoration: BoxDecoration(
+              color: MColors.background,
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: MColors.scoresCyan.withValues(alpha: 0.2)),
+            ),
+            child: Row(
+              children: [
+                _buildSegmentTab(0, isSw ? 'Takwimu' : 'Stats', Icons.bar_chart_rounded),
+                _buildSegmentTab(1, isSw ? 'Vikosi' : 'Lineups', Icons.people_outline_rounded),
+                _buildSegmentTab(2, isSw ? 'Uso kwa Uso' : 'H2H', Icons.compare_arrows_rounded),
+                _buildSegmentTab(3, isSw ? 'Utabiri' : 'Prediction', Icons.auto_awesome),
+              ],
+            ),
+          ),
+          const SizedBox(height: 10),
+
+          // 5. Scrollable Tab Body
+          Expanded(
+            child: SingleChildScrollView(
+              physics: const BouncingScrollPhysics(),
+              padding: const EdgeInsets.fromLTRB(16, 4, 16, 20),
+              child: _buildActiveTabContent(isSw),
+            ),
+          ),
+
+          // 6. Action Buttons Bar
+          Container(
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+            decoration: BoxDecoration(
+              color: MColors.surface,
+              border: Border(
+                top: BorderSide(color: MColors.scoresCyan.withValues(alpha: 0.15)),
+              ),
+            ),
+            child: Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton.icon(
+                    style: OutlinedButton.styleFrom(
+                      side: BorderSide(
+                        color: widget.isReminderSet ? MColors.highlightsGold : MColors.scoresCyan.withValues(alpha: 0.5),
+                      ),
+                      backgroundColor: widget.isReminderSet ? MColors.highlightsGold.withValues(alpha: 0.15) : null,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      padding: const EdgeInsets.symmetric(vertical: 10),
+                    ),
+                    onPressed: () {
+                      Navigator.pop(context);
+                      widget.onToggleReminder();
+                    },
+                    icon: Icon(
+                      widget.isReminderSet ? Icons.notifications_active_rounded : Icons.notifications_none_rounded,
+                      size: 16,
+                      color: widget.isReminderSet ? MColors.highlightsGold : MColors.scoresCyan,
+                    ),
+                    label: Text(
+                      widget.isReminderSet ? (isSw ? 'Ondoa Kikumbusho' : 'Remove Alert') : (isSw ? 'Kikumbusho' : 'Remind Me'),
+                      style: GoogleFonts.manrope(
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                        color: widget.isReminderSet ? MColors.highlightsGold : MColors.textWhite,
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: ElevatedButton.icon(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: MColors.scoresCyan,
+                      foregroundColor: MColors.background,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      padding: const EdgeInsets.symmetric(vertical: 10),
+                    ),
+                    onPressed: widget.onShareMatch,
+                    icon: const Icon(Icons.share_rounded, size: 16),
+                    label: Text(
+                      isSw ? 'Shiriki Mechi' : 'Share Match',
+                      style: GoogleFonts.outfit(
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSegmentTab(int index, String label, IconData icon) {
+    final isSelected = _activeTab == index;
+    return Expanded(
+      child: GestureDetector(
+        onTap: () => setState(() => _activeTab = index),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 180),
+          decoration: BoxDecoration(
+            color: isSelected ? MColors.scoresCyan : Colors.transparent,
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                icon,
+                size: 13,
+                color: isSelected ? MColors.background : MColors.textWhite.withValues(alpha: 0.6),
+              ),
+              const SizedBox(width: 4),
+              Text(
+                label,
+                style: GoogleFonts.manrope(
+                  fontSize: 11,
+                  fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
+                  color: isSelected ? MColors.background : MColors.textWhite.withValues(alpha: 0.7),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildActiveTabContent(bool isSw) {
+    switch (_activeTab) {
+      case 0:
+        return _buildStatsTab(isSw);
+      case 1:
+        return _buildLineupsTab(isSw);
+      case 2:
+        return _buildH2hTab(isSw);
+      case 3:
+      default:
+        return _buildPredictionsTab(isSw);
+    }
+  }
+
+  // --- 1. TAB YA TAKWIMU (MATCH STATS) ---
+  Widget _buildStatsTab(bool isSw) {
+    if (_statsLoading) {
+      return const Padding(
+        padding: EdgeInsets.symmetric(vertical: 36),
+        child: Center(child: CircularProgressIndicator(color: MColors.scoresCyan)),
+      );
+    }
+
+    if (_stats.length < 2) {
+      return Container(
+        margin: const EdgeInsets.only(top: 14),
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: MColors.background,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: MColors.scoresCyan.withValues(alpha: 0.2)),
+        ),
+        child: Column(
+          children: [
+            const Icon(Icons.sports_soccer, size: 36, color: MColors.scoresCyan),
+            const SizedBox(height: 10),
+            Text(
+              isSw
+                  ? 'Takwimu za moja kwa moja zitaanza kuonekana mchezo ukianza mubashara.'
+                  : 'Live statistics will be displayed once the match kicks off.',
+              textAlign: TextAlign.center,
+              style: GoogleFonts.manrope(
+                fontSize: 12.5,
+                color: MColors.textWhite.withValues(alpha: 0.75),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    final home = _stats[0];
+    final away = _stats[1];
+
+    return Column(
+      children: [
+        _buildStatComparisonRow(isSw ? 'Umiliki wa Mpira' : 'Ball Possession', home.ballPossession, away.ballPossession),
+        _buildStatComparisonRow(isSw ? 'Mashuti Yote' : 'Total Shots', '${home.totalShots}', '${away.totalShots}'),
+        _buildStatComparisonRow(isSw ? 'Mashuti Yaliyolenga' : 'Shots on Target', '${home.shotsOnGoal}', '${away.shotsOnGoal}'),
+        _buildStatComparisonRow(isSw ? 'Mashuti Yaliyotoka' : 'Shots off Target', '${home.shotsOffGoal}', '${away.shotsOffGoal}'),
+        _buildStatComparisonRow(isSw ? 'Kona' : 'Corner Kicks', '${home.cornerKicks}', '${away.cornerKicks}'),
+        _buildStatComparisonRow(isSw ? 'Faulo' : 'Fouls', '${home.fouls}', '${away.fouls}'),
+        _buildStatComparisonRow(isSw ? 'Kuotea (Offsides)' : 'Offsides', '${home.offsides}', '${away.offsides}'),
+        _buildStatComparisonRow(isSw ? 'Kadi za Njano' : 'Yellow Cards', '${home.yellowCards}', '${away.yellowCards}', accentColor: Colors.amber),
+        _buildStatComparisonRow(isSw ? 'Kadi Nyekundu' : 'Red Cards', '${home.redCards}', '${away.redCards}', accentColor: Colors.redAccent),
+      ],
+    );
+  }
+
+  Widget _buildStatComparisonRow(String label, String homeVal, String awayVal, {Color? accentColor}) {
+    final int hNum = int.tryParse(homeVal.replaceAll('%', '').trim()) ?? 0;
+    final int aNum = int.tryParse(awayVal.replaceAll('%', '').trim()) ?? 0;
+
+    return Container(
+      margin: const EdgeInsets.symmetric(vertical: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: MColors.background,
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Column(
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                homeVal,
+                style: GoogleFonts.outfit(
+                  fontSize: 13,
+                  fontWeight: FontWeight.bold,
+                  color: accentColor ?? MColors.scoresCyan,
+                ),
+              ),
+              Text(
+                label,
+                style: GoogleFonts.manrope(
+                  fontSize: 11.5,
+                  fontWeight: FontWeight.w600,
+                  color: MColors.textWhite.withValues(alpha: 0.7),
+                ),
+              ),
+              Text(
+                awayVal,
+                style: GoogleFonts.outfit(
+                  fontSize: 13,
+                  fontWeight: FontWeight.bold,
+                  color: accentColor ?? MColors.highlightsGold,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 5),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(3),
+            child: SizedBox(
+              height: 4,
+              child: Row(
+                children: [
+                  Expanded(
+                    flex: hNum > 0 ? hNum : 1,
+                    child: Container(color: accentColor ?? MColors.scoresCyan),
+                  ),
+                  const SizedBox(width: 2),
+                  Expanded(
+                    flex: aNum > 0 ? aNum : 1,
+                    child: Container(color: accentColor ?? MColors.highlightsGold),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // --- 2. TAB YA VIKOSI (LINEUPS) ---
+  Widget _buildLineupsTab(bool isSw) {
+    if (_lineupsLoading) {
+      return const Padding(
+        padding: EdgeInsets.symmetric(vertical: 36),
+        child: Center(child: CircularProgressIndicator(color: MColors.scoresCyan)),
+      );
+    }
+
+    if (_lineups.length < 2) {
+      return Container(
+        margin: const EdgeInsets.only(top: 14),
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: MColors.background,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: MColors.scoresCyan.withValues(alpha: 0.2)),
+        ),
+        child: Column(
+          children: [
+            const Icon(Icons.people_outline_rounded, size: 36, color: MColors.highlightsGold),
+            const SizedBox(height: 10),
+            Text(
+              isSw
+                  ? 'Vikosi rasmi vya mechi vinatarajiwa kutangazwa saa 1 kabla ya kuanza kwa mchezo.'
+                  : 'Official lineups will be confirmed 1 hour before kick-off.',
+              textAlign: TextAlign.center,
+              style: GoogleFonts.manrope(
+                fontSize: 12.5,
+                color: MColors.textWhite.withValues(alpha: 0.75),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    final home = _lineups[0];
+    final away = _lineups[1];
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Formation & Coach Summary
+        Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: MColors.background,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: MColors.scoresCyan.withValues(alpha: 0.25)),
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    '${home.formation} (${home.teamName})',
+                    style: GoogleFonts.outfit(
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                      color: MColors.scoresCyan,
+                    ),
+                  ),
+                  if (home.coachName.isNotEmpty)
+                    Text(
+                      '${isSw ? 'Kocha:' : 'Coach:'} ${home.coachName}',
+                      style: GoogleFonts.manrope(fontSize: 11, color: MColors.textWhite.withValues(alpha: 0.6)),
+                    ),
+                ],
+              ),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Text(
+                    '${away.formation} (${away.teamName})',
+                    style: GoogleFonts.outfit(
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                      color: MColors.highlightsGold,
+                    ),
+                  ),
+                  if (away.coachName.isNotEmpty)
+                    Text(
+                      '${isSw ? 'Kocha:' : 'Coach:'} ${away.coachName}',
+                      style: GoogleFonts.manrope(fontSize: 11, color: MColors.textWhite.withValues(alpha: 0.6)),
+                    ),
+                ],
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 14),
+
+        // Starting XI Header
+        Text(
+          isSw ? 'Kikosi cha Kwanza (Starting XI)' : 'Starting XI',
+          style: GoogleFonts.outfit(
+            fontSize: 13,
+            fontWeight: FontWeight.bold,
+            color: MColors.textWhite,
+          ),
+        ),
+        const SizedBox(height: 8),
+
+        // Starting XI Lists Side-by-Side
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: home.startXI.map((p) => _buildPlayerTile(p, MColors.scoresCyan)).toList(),
+              ),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: away.startXI.map((p) => _buildPlayerTile(p, MColors.highlightsGold)).toList(),
+              ),
+            ),
+          ],
+        ),
+
+        if (home.substitutes.isNotEmpty || away.substitutes.isNotEmpty) ...[
+          const SizedBox(height: 14),
+          Text(
+            isSw ? 'Wachezaji wa Akiba (Substitutes)' : 'Substitutes',
+            style: GoogleFonts.outfit(
+              fontSize: 13,
+              fontWeight: FontWeight.bold,
+              color: MColors.textWhite.withValues(alpha: 0.7),
+            ),
+          ),
+          const SizedBox(height: 8),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: home.substitutes.take(7).map((p) => _buildPlayerTile(p, MColors.textWhite.withValues(alpha: 0.5))).toList(),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: away.substitutes.take(7).map((p) => _buildPlayerTile(p, MColors.textWhite.withValues(alpha: 0.5))).toList(),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ],
+    );
+  }
+
+  Widget _buildPlayerTile(LineupPlayer player, Color accent) {
+    return Container(
+      margin: const EdgeInsets.symmetric(vertical: 2.5),
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3.5),
+      decoration: BoxDecoration(
+        color: MColors.background,
+        borderRadius: BorderRadius.circular(6),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 20,
+            height: 20,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: accent.withValues(alpha: 0.2),
+            ),
+            child: Center(
+              child: Text(
+                '${player.number}',
+                style: GoogleFonts.outfit(
+                  fontSize: 10,
+                  fontWeight: FontWeight.bold,
+                  color: accent,
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(width: 6),
+          Expanded(
+            child: Text(
+              player.name,
+              overflow: TextOverflow.ellipsis,
+              style: GoogleFonts.manrope(
+                fontSize: 11,
+                fontWeight: FontWeight.w600,
+                color: MColors.textWhite,
+              ),
+            ),
+          ),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+            decoration: BoxDecoration(
+              color: MColors.surface,
+              borderRadius: BorderRadius.circular(4),
+            ),
+            child: Text(
+              player.pos,
+              style: GoogleFonts.manrope(
+                fontSize: 9,
+                fontWeight: FontWeight.bold,
+                color: MColors.textWhite.withValues(alpha: 0.6),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // --- 3. TAB YA USO KWA USO (H2H) ---
+  Widget _buildH2hTab(bool isSw) {
+    if (_h2hLoading) {
+      return const Padding(
+        padding: EdgeInsets.symmetric(vertical: 36),
+        child: Center(child: CircularProgressIndicator(color: MColors.scoresCyan)),
+      );
+    }
+
+    if (_h2h.isEmpty) {
+      return Container(
+        margin: const EdgeInsets.only(top: 14),
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: MColors.background,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: MColors.scoresCyan.withValues(alpha: 0.2)),
+        ),
+        child: Column(
+          children: [
+            const Icon(Icons.history_rounded, size: 36, color: MColors.scoresCyan),
+            const SizedBox(height: 10),
+            Text(
+              isSw
+                  ? 'Historia ya dabi: Timu hizi zina rekodi thabiti za mashindano ya kitaifa na kimataifa.'
+                  : 'Head to Head: Both clubs maintain a competitive historical record.',
+              textAlign: TextAlign.center,
+              style: GoogleFonts.manrope(
+                fontSize: 12.5,
+                color: MColors.textWhite.withValues(alpha: 0.75),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          isSw ? 'Mechi Zilizopita Kati ya Timu Hizi' : 'Previous Encounters',
+          style: GoogleFonts.outfit(
+            fontSize: 13,
+            fontWeight: FontWeight.bold,
+            color: MColors.highlightsGold,
+          ),
+        ),
+        const SizedBox(height: 8),
+        ..._h2h.map((m) {
+          return Container(
+            margin: const EdgeInsets.symmetric(vertical: 4),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            decoration: BoxDecoration(
+              color: MColors.background,
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: MColors.scoresCyan.withValues(alpha: 0.15)),
+            ),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    m.homeTeam,
+                    textAlign: TextAlign.end,
+                    overflow: TextOverflow.ellipsis,
+                    style: GoogleFonts.manrope(
+                      fontSize: 11.5,
+                      fontWeight: FontWeight.w600,
+                      color: MColors.textWhite,
+                    ),
+                  ),
+                ),
+                Container(
+                  margin: const EdgeInsets.symmetric(horizontal: 10),
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  decoration: BoxDecoration(
+                    color: MColors.surface,
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: Text(
+                    '${m.homeScore} - ${m.awayScore}',
+                    style: GoogleFonts.outfit(
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                      color: MColors.scoresCyan,
+                    ),
+                  ),
+                ),
+                Expanded(
+                  child: Text(
+                    m.awayTeam,
+                    overflow: TextOverflow.ellipsis,
+                    style: GoogleFonts.manrope(
+                      fontSize: 11.5,
+                      fontWeight: FontWeight.w600,
+                      color: MColors.textWhite,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          );
+        }),
+      ],
+    );
+  }
+
+  // --- 4. TAB YA UTABIRI (PREDICTIONS & VENUE) ---
+  Widget _buildPredictionsTab(bool isSw) {
+    final m = widget.match;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // AI Prediction Box
+        Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: MColors.background,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: MColors.scoresCyan.withValues(alpha: 0.25)),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  const Icon(Icons.auto_awesome, size: 14, color: MColors.highlightsGold),
+                  const SizedBox(width: 6),
+                  Text(
+                    isSw ? 'Utabiri wa Ushindi wa AI' : 'AI Win Probability',
+                    style: GoogleFonts.outfit(
+                      fontSize: 12.5,
+                      fontWeight: FontWeight.bold,
+                      color: MColors.highlightsGold,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 10),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    '${m.homeTeam}: ${m.homeWinProb}%',
+                    style: GoogleFonts.manrope(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                      color: MColors.scoresCyan,
+                    ),
+                  ),
+                  Text(
+                    '${isSw ? 'Sare' : 'Draw'}: ${m.drawProb}%',
+                    style: GoogleFonts.manrope(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                      color: MColors.textWhite.withValues(alpha: 0.6),
+                    ),
+                  ),
+                  Text(
+                    '${m.awayTeam}: ${m.awayWinProb}%',
+                    style: GoogleFonts.manrope(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                      color: MColors.highlightsGold,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 6),
+              ClipRRect(
+                borderRadius: BorderRadius.circular(6),
+                child: SizedBox(
+                  height: 7,
+                  child: Row(
+                    children: [
+                      Expanded(
+                        flex: m.homeWinProb > 0 ? m.homeWinProb : 1,
+                        child: Container(color: MColors.scoresCyan),
+                      ),
+                      const SizedBox(width: 2),
+                      Expanded(
+                        flex: m.drawProb > 0 ? m.drawProb : 1,
+                        child: Container(color: Colors.white38),
+                      ),
+                      const SizedBox(width: 2),
+                      Expanded(
+                        flex: m.awayWinProb > 0 ? m.awayWinProb : 1,
+                        child: Container(color: MColors.highlightsGold),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 14),
+
+        // Form Guide Row
+        Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: MColors.background,
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                isSw ? 'Mwenendo wa Mechi 5 Zilizopita:' : 'Recent Form (Last 5):',
+                style: GoogleFonts.manrope(
+                  fontSize: 11.5,
+                  fontWeight: FontWeight.w600,
+                  color: MColors.textWhite.withValues(alpha: 0.6),
+                ),
+              ),
+              const SizedBox(height: 8),
+              _buildFormRow(m.homeTeam, m.homeForm),
+              const SizedBox(height: 6),
+              _buildFormRow(m.awayTeam, m.awayForm),
+            ],
+          ),
+        ),
+        const SizedBox(height: 14),
+
+        // Match Info List
+        _buildInfoTile(
+          Icons.access_time_rounded,
+          isSw ? 'Muda / Hali:' : 'Time / Status:',
+          '${m.matchTime} (${m.getStatus(isSw)})',
+        ),
+        const SizedBox(height: 6),
+        _buildInfoTile(
+          Icons.stadium_outlined,
+          isSw ? 'Uwanja:' : 'Venue:',
+          m.venue.isNotEmpty ? m.venue : (isSw ? 'Uwanja wa Kimataifa' : 'Main Stadium'),
+        ),
+        if (m.referee != null && m.referee!.isNotEmpty) ...[
+          const SizedBox(height: 6),
+          _buildInfoTile(
+            Icons.person_pin_outlined,
+            isSw ? 'Mwamuzi:' : 'Referee:',
+            m.referee!,
+          ),
+        ],
+      ],
+    );
+  }
+
+  Widget _buildFormRow(String teamName, String form) {
+    final letters = form.split('-');
     return Row(
       children: [
         Expanded(
-          flex: 4,
           child: Text(
             teamName,
             overflow: TextOverflow.ellipsis,
             style: GoogleFonts.manrope(
-              fontSize: 11,
+              fontSize: 11.5,
               fontWeight: FontWeight.w600,
-              color: MColors.textWhite.withValues(alpha: 0.85),
+              color: MColors.textWhite,
             ),
           ),
         ),
-        const SizedBox(width: 8),
         Row(
           mainAxisSize: MainAxisSize.min,
-          children: letters.map((letter) {
-            Color bg;
-            if (letter == 'W') {
-              bg = const Color(0xFF00C853); // Kijani
-            } else if (letter == 'D') {
-              bg = const Color(0xFFFFB300); // Manjano/Machungwa
-            } else {
-              bg = const Color(0xFFE53935); // Nyekundu
-            }
+          children: letters.map((l) {
+            Color c = const Color(0xFF00C853);
+            if (l == 'D') c = const Color(0xFFFFB300);
+            if (l == 'L') c = const Color(0xFFE53935);
             return Container(
               margin: const EdgeInsets.only(left: 3),
-              width: 16,
-              height: 16,
-              decoration: BoxDecoration(
-                color: bg,
-                borderRadius: BorderRadius.circular(3),
-              ),
+              width: 17,
+              height: 17,
+              decoration: BoxDecoration(color: c, borderRadius: BorderRadius.circular(3)),
               child: Center(
                 child: Text(
-                  letter,
-                  style: GoogleFonts.outfit(
-                    fontSize: 9.5,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
-                  ),
+                  l,
+                  style: GoogleFonts.outfit(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.white),
                 ),
               ),
             );
@@ -2065,32 +2692,32 @@ Pakua M Football Plus kupata matokeo mubashara na takwimu zote!''';
     );
   }
 
-  Widget _buildModalInfoRow(IconData icon, String label, String value) {
-    return Row(
-      children: [
-        Icon(icon, size: 16, color: MColors.scoresCyan),
-        const SizedBox(width: 8),
-        Text(
-          label,
-          style: GoogleFonts.manrope(
-            fontSize: 12,
-            color: MColors.textWhite.withValues(alpha: 0.6),
+  Widget _buildInfoTile(IconData icon, String label, String value) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: MColors.background,
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Row(
+        children: [
+          Icon(icon, size: 16, color: MColors.scoresCyan),
+          const SizedBox(width: 8),
+          Text(
+            label,
+            style: GoogleFonts.manrope(fontSize: 12, color: MColors.textWhite.withValues(alpha: 0.6)),
           ),
-        ),
-        const SizedBox(width: 6),
-        Expanded(
-          child: Text(
-            value,
-            textAlign: TextAlign.end,
-            overflow: TextOverflow.ellipsis,
-            style: GoogleFonts.manrope(
-              fontSize: 12,
-              fontWeight: FontWeight.w600,
-              color: MColors.textWhite,
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              value,
+              textAlign: TextAlign.end,
+              overflow: TextOverflow.ellipsis,
+              style: GoogleFonts.manrope(fontSize: 12, fontWeight: FontWeight.w600, color: MColors.textWhite),
             ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 }

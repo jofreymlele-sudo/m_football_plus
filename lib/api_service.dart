@@ -273,6 +273,219 @@ class FootballApiService {
       return null;
     }
   }
+
+  // --------------------------------------------------------------------------
+  // E. KUCHUKUA MSIMAMO WA LIGI (LEAGUE STANDINGS) KUTOKA API-FOOTBALL
+  // --------------------------------------------------------------------------
+  final Map<String, List<StandingItem>> _standingsCache = {};
+
+  Future<List<StandingItem>> getStandings({
+    required int leagueId,
+    int season = 2024,
+    bool forceRefresh = false,
+  }) async {
+    final cacheKey = '${leagueId}_$season';
+    if (!forceRefresh && _standingsCache.containsKey(cacheKey)) {
+      return _standingsCache[cacheKey]!;
+    }
+
+    final uri = Uri.parse('$_apiFootballBaseUrl/standings?league=$leagueId&season=$season');
+
+    try {
+      debugPrint('[M FOOTBALL PLUS API] Inavuta Msimamo wa Ligi $leagueId ($season): $uri');
+
+      final response = await http
+          .get(uri, headers: _apiFootballHeaders)
+          .timeout(const Duration(seconds: 12));
+
+      if (response.statusCode == 200) {
+        final Map<String, dynamic> data = json.decode(response.body);
+        final List<dynamic> responseList = data['response'] ?? [];
+
+        if (responseList.isNotEmpty) {
+          final first = responseList.first as Map<String, dynamic>;
+          final league = first['league'] as Map<String, dynamic>? ?? {};
+          final standingsList = league['standings'] as List<dynamic>? ?? [];
+
+          if (standingsList.isNotEmpty) {
+            // Mara nyingi API-Football inarudisha list ya list [[standing1, standing2]]
+            final List<dynamic> targetList = (standingsList.first is List)
+                ? (standingsList.first as List<dynamic>)
+                : standingsList;
+
+            final standings = targetList
+                .map((item) => StandingItem.fromJson(item as Map<String, dynamic>))
+                .toList();
+
+            _standingsCache[cacheKey] = standings;
+            return standings;
+          }
+        }
+      }
+      return [];
+    } catch (e) {
+      debugPrint('[M FOOTBALL PLUS API Exception] Msimamo umefeli: $e');
+      return [];
+    }
+  }
+
+  // --------------------------------------------------------------------------
+  // F. KUCHUKUA TAKWIMU ZA MECHI (MATCH STATISTICS) KUTOKA API-FOOTBALL
+  // --------------------------------------------------------------------------
+  Future<List<FixtureTeamStats>> getFixtureStatistics(int fixtureId) async {
+    if (fixtureId <= 0) return [];
+
+    final uri = Uri.parse('$_apiFootballBaseUrl/fixtures/statistics?fixture=$fixtureId');
+
+    try {
+      debugPrint('[M FOOTBALL PLUS API] Inavuta Takwimu za Mechi $fixtureId: $uri');
+
+      final response = await http
+          .get(uri, headers: _apiFootballHeaders)
+          .timeout(const Duration(seconds: 10));
+
+      if (response.statusCode == 200) {
+        final Map<String, dynamic> data = json.decode(response.body);
+        final List<dynamic> responseList = data['response'] ?? [];
+
+        return responseList.map((item) {
+          final m = item as Map<String, dynamic>;
+          final team = m['team'] as Map<String, dynamic>? ?? {};
+          final rawStats = m['statistics'] as List<dynamic>? ?? [];
+
+          final Map<String, dynamic> statMap = {};
+          for (final s in rawStats) {
+            final sm = s as Map<String, dynamic>;
+            final type = sm['type'] as String? ?? '';
+            statMap[type] = sm['value'];
+          }
+
+          return FixtureTeamStats(
+            teamId: team['id'] as int? ?? 0,
+            teamName: team['name'] as String? ?? '',
+            teamLogo: team['logo'] as String? ?? '',
+            stats: statMap,
+          );
+        }).toList();
+      }
+      return [];
+    } catch (e) {
+      debugPrint('[M FOOTBALL PLUS API Exception] Takwimu za mechi $fixtureId zimefeli: $e');
+      return [];
+    }
+  }
+
+  // --------------------------------------------------------------------------
+  // G. KUCHUKUA VIKOSI VYA MECHI (LINEUPS) KUTOKA API-FOOTBALL
+  // --------------------------------------------------------------------------
+  Future<List<FixtureLineupModel>> getFixtureLineups(int fixtureId) async {
+    if (fixtureId <= 0) return [];
+
+    final uri = Uri.parse('$_apiFootballBaseUrl/fixtures/lineups?fixture=$fixtureId');
+
+    try {
+      debugPrint('[M FOOTBALL PLUS API] Inavuta Vikosi vya Mechi $fixtureId: $uri');
+
+      final response = await http
+          .get(uri, headers: _apiFootballHeaders)
+          .timeout(const Duration(seconds: 10));
+
+      if (response.statusCode == 200) {
+        final Map<String, dynamic> data = json.decode(response.body);
+        final List<dynamic> responseList = data['response'] ?? [];
+
+        return responseList
+            .map((item) => FixtureLineupModel.fromJson(item as Map<String, dynamic>))
+            .toList();
+      }
+      return [];
+    } catch (e) {
+      debugPrint('[M FOOTBALL PLUS API Exception] Vikosi vya mechi $fixtureId vimefeli: $e');
+      return [];
+    }
+  }
+
+  // --------------------------------------------------------------------------
+  // H. KUCHUKUA HISTORIA YA TIMU (HEAD TO HEAD) KUTOKA API-FOOTBALL
+  // --------------------------------------------------------------------------
+  Future<List<MatchModel>> getHeadToHead(int team1Id, int team2Id) async {
+    if (team1Id <= 0 || team2Id <= 0) return [];
+
+    final uri = Uri.parse('$_apiFootballBaseUrl/fixtures/headtohead?h2h=$team1Id-$team2Id');
+
+    try {
+      debugPrint('[M FOOTBALL PLUS API] Inavuta H2H ya Timu $team1Id vs $team2Id: $uri');
+
+      final response = await http
+          .get(uri, headers: _apiFootballHeaders)
+          .timeout(const Duration(seconds: 10));
+
+      if (response.statusCode == 200) {
+        final Map<String, dynamic> data = json.decode(response.body);
+        final List<dynamic> responseList = data['response'] ?? [];
+
+        return responseList
+            .take(6)
+            .map((item) => MatchModel.fromApiFootballJson(item as Map<String, dynamic>))
+            .toList();
+      }
+      return [];
+    } catch (e) {
+      debugPrint('[M FOOTBALL PLUS API Exception] H2H imefeli: $e');
+      return [];
+    }
+  }
+
+  // --------------------------------------------------------------------------
+  // I. KUCHUKUA HABARI ZA SOKA (FOOTBALL NEWS) KUTOKA ESPN & THESPORTSDB
+  // --------------------------------------------------------------------------
+  final Map<String, List<NewsArticleModel>> _newsCache = {};
+  DateTime? _lastNewsFetch;
+
+  Future<List<NewsArticleModel>> getFootballNews({
+    String category = 'all',
+    bool forceRefresh = false,
+  }) async {
+    final now = DateTime.now();
+    if (!forceRefresh &&
+        _newsCache.containsKey(category) &&
+        _lastNewsFetch != null &&
+        now.difference(_lastNewsFetch!).inMinutes < 15) {
+      return _newsCache[category]!;
+    }
+
+    String espnLeague = 'all';
+    if (category == 'epl') espnLeague = 'eng.1';
+    if (category == 'laliga') espnLeague = 'esp.1';
+    if (category == 'ucl') espnLeague = 'uefa.champions';
+
+    final uri = Uri.parse('https://site.api.espn.com/apis/site/v2/sports/soccer/$espnLeague/news');
+
+    try {
+      debugPrint('[M FOOTBALL PLUS API] Inavuta Habari za Soka ($category): $uri');
+
+      final response = await http.get(uri).timeout(const Duration(seconds: 10));
+
+      if (response.statusCode == 200) {
+        final Map<String, dynamic> data = json.decode(response.body);
+        final List<dynamic> articles = data['articles'] ?? [];
+
+        if (articles.isNotEmpty) {
+          final newsList = articles
+              .map((item) => NewsArticleModel.fromEspnJson(item as Map<String, dynamic>))
+              .toList();
+
+          _newsCache[category] = newsList;
+          _lastNewsFetch = now;
+          return newsList;
+        }
+      }
+    } catch (e) {
+      debugPrint('[M FOOTBALL PLUS API Exception] Habari zimefeli kutoka ESPN: $e');
+    }
+
+    return _newsCache[category] ?? [];
+  }
 }
 
 // ============================================================================
@@ -289,6 +502,8 @@ class MatchModel {
   final String? leagueCountry;
 
   // Timu
+  final int homeTeamId;
+  final int awayTeamId;
   final String homeTeam;
   final String awayTeam;
   final String homeTeamLogo;
@@ -328,6 +543,8 @@ class MatchModel {
     required this.leagueSw,
     this.leagueLogo = '',
     this.leagueCountry,
+    this.homeTeamId = 0,
+    this.awayTeamId = 0,
     required this.homeTeam,
     required this.awayTeam,
     this.homeTeamLogo = '',
@@ -401,6 +618,8 @@ class MatchModel {
     final homeMap = teams['home'] as Map<String, dynamic>? ?? {};
     final awayMap = teams['away'] as Map<String, dynamic>? ?? {};
 
+    final int hId = homeMap['id'] as int? ?? 0;
+    final int aId = awayMap['id'] as int? ?? 0;
     final String hName = homeMap['name'] as String? ?? 'Nyumbani';
     final String aName = awayMap['name'] as String? ?? 'Ugenini';
     final String hLogo = homeMap['logo'] as String? ?? '';
@@ -435,6 +654,8 @@ class MatchModel {
       leagueSw: lSwahili,
       leagueLogo: lLogo,
       leagueCountry: lCountry,
+      homeTeamId: hId,
+      awayTeamId: aId,
       homeTeam: hName,
       awayTeam: aName,
       homeTeamLogo: hLogo,
@@ -730,6 +951,225 @@ class TheSportsDbTeam {
       stadium: json['strStadium'] as String?,
       country: json['strCountry'] as String?,
       description: json['strDescriptionEN'] as String?,
+    );
+  }
+}
+
+// ============================================================================
+// 4. MODEL CLASS: StandingItem (Msimamo wa Ligi)
+// ============================================================================
+class StandingItem {
+  final int rank;
+  final int teamId;
+  final String teamName;
+  final String teamLogo;
+  final int points;
+  final int goalsDiff;
+  final int played;
+  final int win;
+  final int draw;
+  final int lose;
+  final int goalsFor;
+  final int goalsAgainst;
+  final String form;
+  final String? description;
+
+  const StandingItem({
+    required this.rank,
+    required this.teamId,
+    required this.teamName,
+    required this.teamLogo,
+    required this.points,
+    required this.goalsDiff,
+    required this.played,
+    required this.win,
+    required this.draw,
+    required this.lose,
+    required this.goalsFor,
+    required this.goalsAgainst,
+    required this.form,
+    this.description,
+  });
+
+  factory StandingItem.fromJson(Map<String, dynamic> json) {
+    final team = json['team'] as Map<String, dynamic>? ?? {};
+    final all = json['all'] as Map<String, dynamic>? ?? {};
+    final goals = all['goals'] as Map<String, dynamic>? ?? {};
+
+    return StandingItem(
+      rank: json['rank'] as int? ?? 0,
+      teamId: team['id'] as int? ?? 0,
+      teamName: team['name'] as String? ?? 'Timu',
+      teamLogo: team['logo'] as String? ?? '',
+      points: json['points'] as int? ?? 0,
+      goalsDiff: json['goalsDiff'] as int? ?? 0,
+      played: all['played'] as int? ?? 0,
+      win: all['win'] as int? ?? 0,
+      draw: all['draw'] as int? ?? 0,
+      lose: all['lose'] as int? ?? 0,
+      goalsFor: goals['for'] as int? ?? 0,
+      goalsAgainst: goals['against'] as int? ?? 0,
+      form: json['form'] as String? ?? '',
+      description: json['description'] as String?,
+    );
+  }
+}
+
+// ============================================================================
+// 5. MODEL CLASS: FixtureTeamStats (Takwimu za Mechi ya Timu)
+// ============================================================================
+class FixtureTeamStats {
+  final int teamId;
+  final String teamName;
+  final String teamLogo;
+  final Map<String, dynamic> stats;
+
+  const FixtureTeamStats({
+    required this.teamId,
+    required this.teamName,
+    required this.teamLogo,
+    required this.stats,
+  });
+
+  dynamic getStat(String key) => stats[key];
+
+  String get ballPossession => stats['Ball Possession']?.toString() ?? '50%';
+  int get totalShots => int.tryParse(stats['Total Shots']?.toString() ?? '0') ?? 0;
+  int get shotsOnGoal => int.tryParse(stats['Shots on Goal']?.toString() ?? '0') ?? 0;
+  int get shotsOffGoal => int.tryParse(stats['Shots off Goal']?.toString() ?? '0') ?? 0;
+  int get cornerKicks => int.tryParse(stats['Corner Kicks']?.toString() ?? '0') ?? 0;
+  int get fouls => int.tryParse(stats['Fouls']?.toString() ?? '0') ?? 0;
+  int get yellowCards => int.tryParse(stats['Yellow Cards']?.toString() ?? '0') ?? 0;
+  int get redCards => int.tryParse(stats['Red Cards']?.toString() ?? '0') ?? 0;
+  int get offsides => int.tryParse(stats['Offsides']?.toString() ?? '0') ?? 0;
+  String get passesAccuracy => stats['Passes %']?.toString() ?? stats['Passes accurate']?.toString() ?? '-';
+}
+
+// ============================================================================
+// 6. MODEL CLASS: FixtureLineupModel & LineupPlayer (Vikosi vya Mechi)
+// ============================================================================
+class LineupPlayer {
+  final int id;
+  final String name;
+  final int number;
+  final String pos; // G, D, M, F
+  final String? grid;
+
+  const LineupPlayer({
+    required this.id,
+    required this.name,
+    required this.number,
+    required this.pos,
+    this.grid,
+  });
+
+  factory LineupPlayer.fromJson(Map<String, dynamic> json) {
+    final p = json['player'] as Map<String, dynamic>? ?? json;
+    return LineupPlayer(
+      id: p['id'] as int? ?? 0,
+      name: p['name'] as String? ?? '',
+      number: p['number'] as int? ?? 0,
+      pos: p['pos'] as String? ?? 'M',
+      grid: p['grid'] as String?,
+    );
+  }
+}
+
+class FixtureLineupModel {
+  final int teamId;
+  final String teamName;
+  final String teamLogo;
+  final String formation;
+  final String coachName;
+  final String coachPhoto;
+  final List<LineupPlayer> startXI;
+  final List<LineupPlayer> substitutes;
+
+  const FixtureLineupModel({
+    required this.teamId,
+    required this.teamName,
+    required this.teamLogo,
+    required this.formation,
+    required this.coachName,
+    required this.coachPhoto,
+    required this.startXI,
+    required this.substitutes,
+  });
+
+  factory FixtureLineupModel.fromJson(Map<String, dynamic> json) {
+    final team = json['team'] as Map<String, dynamic>? ?? {};
+    final coach = json['coach'] as Map<String, dynamic>? ?? {};
+    final rawXI = json['startXI'] as List<dynamic>? ?? [];
+    final rawSubs = json['substitutes'] as List<dynamic>? ?? [];
+
+    return FixtureLineupModel(
+      teamId: team['id'] as int? ?? 0,
+      teamName: team['name'] as String? ?? '',
+      teamLogo: team['logo'] as String? ?? '',
+      formation: json['formation'] as String? ?? '4-3-3',
+      coachName: coach['name'] as String? ?? '',
+      coachPhoto: coach['photo'] as String? ?? '',
+      startXI: rawXI.map((e) => LineupPlayer.fromJson(e as Map<String, dynamic>)).toList(),
+      substitutes: rawSubs.map((e) => LineupPlayer.fromJson(e as Map<String, dynamic>)).toList(),
+    );
+  }
+}
+
+// ============================================================================
+// 7. MODEL CLASS: NewsArticleModel (Habari za Soka)
+// ============================================================================
+class NewsArticleModel {
+  final String id;
+  final String title;
+  final String description;
+  final String imageUrl;
+  final String publishedAt;
+  final String source;
+  final String? url;
+  final String category;
+
+  const NewsArticleModel({
+    required this.id,
+    required this.title,
+    required this.description,
+    required this.imageUrl,
+    required this.publishedAt,
+    required this.source,
+    this.url,
+    this.category = 'Soccer',
+  });
+
+  factory NewsArticleModel.fromEspnJson(Map<String, dynamic> json) {
+    final String title = json['headline'] as String? ?? json['title'] as String? ?? 'Habari ya Soka';
+    final String desc = json['description'] as String? ?? '';
+    final String byline = json['byline'] as String? ?? 'ESPN Soccer';
+    final String pub = json['published'] as String? ?? '';
+
+    String img = '';
+    final images = json['images'] as List<dynamic>? ?? [];
+    if (images.isNotEmpty) {
+      final firstImg = images.first as Map<String, dynamic>;
+      img = firstImg['url'] as String? ?? '';
+    }
+
+    String? link;
+    final links = json['links'] as Map<String, dynamic>?;
+    if (links != null) {
+      final web = links['web'] as Map<String, dynamic>?;
+      if (web != null) {
+        link = web['href'] as String?;
+      }
+    }
+
+    return NewsArticleModel(
+      id: title.hashCode.toString(),
+      title: title,
+      description: desc,
+      imageUrl: img.isNotEmpty ? img : 'https://images.unsplash.com/photo-1508098682722-e99c43a406b2?w=800',
+      publishedAt: pub,
+      source: byline,
+      url: link,
+      category: 'Kimataifa',
     );
   }
 }
