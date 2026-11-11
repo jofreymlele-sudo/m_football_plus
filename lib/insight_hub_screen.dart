@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'api_service.dart';
 import 'main.dart' show MColors;
+import 'admin_screen.dart';
+import 'firebase_service.dart';
 
 // ============================================================================
 // UKURASA WA KITUO CHA MAARIFA (INSIGHT HUB SCREEN)
@@ -750,95 +752,50 @@ class _InsightHubScreenState extends State<InsightHubScreen> {
   }
 
   // ==========================================================================
-  // B. KIPENGELE CHA 2: UCHAMBUZI WA WATAALAM (EXPERT ANALYSIS)
+  // B. KIPENGELE CHA 2: UCHAMBUZI WA WATAALAM (EXPERT ANALYSIS - STREAMBUILDER)
   // ==========================================================================
   Widget _buildExpertAnalysisSection(bool isSw) {
-    final analysts = [
-      {
-        'id': 0,
-        'name': 'Shaffih Dauda',
-        'roleSw': 'Mchambuzi Mwandamizi & Mwanahabari wa Michezo',
-        'roleEn': 'Senior Sports Columnist & Analyst',
-        'avatar': 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
-        'match': 'Young Africans vs Simba SC',
-        'league': 'NBC Premier League',
-        'headlineSw': 'Vita ya Viungo na Mbinu za Gamondi Dhidi ya Mpango wa Fadlu',
-        'headlineEn': 'Midfield Supremacy: Gamondi’s Blueprints vs Fadlu’s Counter-Shape',
-        'contentSw':
-            'Simba watahitaji nidhamu kubwa kwenye eneo la kiungo kuzuia mipira ya kina Aziz Ki na Pacome. Ikiwa Yanga watadhibiti eneo la namba nane na kumi mapema, nafasi ya Simba itabaki kwenye mashambulizi ya kushtukiza pembeni. Mchezo utaamuliwa na nani atafanya makosa machache kwenye sekunde 5 baada ya kupoteza mpira (Counter-Pressing).',
-        'contentEn':
-            'Simba will require supreme positional discipline to restrict Aziz Ki and Pacome from operating in half-spaces. If Yanga dictate tempo through zone 14, Simba must rely heavily on explosive transitions down the flanks. Transitions during the first five seconds post-turnover will decide the contest.',
-        'tag': '#KariakooDerby',
-      },
-      {
-        'id': 1,
-        'name': 'Edo Kumwembe',
-        'roleSw': 'Mwandishi & Mchambuzi wa Soka Kimataifa',
-        'roleEn': 'Football Columnist & International Analyst',
-        'avatar': 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80',
-        'match': 'Arsenal vs Chelsea',
-        'league': 'Premier League',
-        'headlineSw': 'Uimara wa Ngome ya Arsenal Dhidi ya Kasi ya Vijana wa Chelsea',
-        'headlineEn': 'Arsenal’s Defensive Bastion vs Chelsea’s Rapid Youth Transition',
-        'contentSw':
-            'Arsenal wamejenga ngome ngumu zaidi ya ulinzi msimu huu. Saliba na Gabriel wanawapa uwezo wa kusukuma mstari mbele bila woga. Chelsea wanaweza kuleta madhara iwapo watatumia vizuri nafasi zinazotokea nyuma ya mabeki wa pembeni wa Arsenal.',
-        'contentEn':
-            'Arsenal possess the most resolute center-back pairing in the league right now. Saliba and Gabriel enable a high line with negligible risk. Chelsea’s only viable breach point lies in exploiting the inverted fullbacks on swift counter routes.',
-        'tag': '#PremierLeague',
-      },
-      {
-        'id': 2,
-        'name': 'Ally Mayay',
-        'roleSw': 'Nahodha wa Zamani wa Taifa Stars & Mchambuzi wa Kiufundi',
-        'roleEn': 'Former Taifa Stars Captain & Technical Expert',
-        'avatar': 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150&auto=format&fit=crop&q=80',
-        'match': 'Ligi Kuu ya NBC — Tathmini ya Mzunguko',
-        'league': 'Tanzania NBC PL',
-        'headlineSw': 'Kwanini Timu za Kati Zinafanya Ligi Kuwa Ngumu Zaidi Msimu Huu',
-        'headlineEn': 'Why Mid-Table Resurgence Has Elevated NBC Premier League Quality',
-        'contentSw':
-            'Kiwango cha ufundishaji kwenye vilabu kama Azam, KMC na Mashujaa kimepanda sana. Hakuna tena mechi rahisi ambazo timu kubwa zinapata ushindi mnono bila jasho. Mbinu za kuzuia kwa vitalu vya chini (Low Block) zimekuwa na ufanisi mkubwa.',
-        'contentEn':
-            'Tactical coaching standards among mid-table sides have surged remarkably. There are no longer routine strolls for traditional giants. Compact low-blocks and organized pressing structures demand higher creativity and set-piece sharpness.',
-        'tag': '#NBCPL',
-      },
-    ];
+    return StreamBuilder<List<Map<String, dynamic>>>(
+      stream: FirestoreService().streamAnalysis(),
+      builder: (context, snapshot) {
+        final analysts = snapshot.data ?? [];
+        if (analysts.isEmpty) return const SizedBox();
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        // Kichwa cha Sehemu
-        Row(
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Container(
-              padding: const EdgeInsets.all(6),
-              decoration: BoxDecoration(
-                color: MColors.highlightsGold.withValues(alpha: 0.15),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: const Icon(Icons.record_voice_over_rounded, size: 20, color: MColors.highlightsGold),
+            // Kichwa cha Sehemu
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(6),
+                  decoration: BoxDecoration(
+                    color: MColors.highlightsGold.withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: const Icon(Icons.record_voice_over_rounded, size: 20, color: MColors.highlightsGold),
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  isSw ? 'Uchambuzi wa Wataalam' : 'Expert Tactical Analysis',
+                  style: GoogleFonts.outfit(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: MColors.textWhite,
+                  ),
+                ),
+              ],
             ),
-            const SizedBox(width: 8),
-            Text(
-              isSw ? 'Uchambuzi wa Wataalam' : 'Expert Tactical Analysis',
-              style: GoogleFonts.outfit(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: MColors.textWhite,
-              ),
-            ),
-          ],
-        ),
 
-        const SizedBox(height: 12),
+            const SizedBox(height: 12),
 
-        // Orodha ya Kadi za Wachambuzi
-        ListView.separated(
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          itemCount: analysts.length,
-          separatorBuilder: (_, __) => const SizedBox(height: 12),
-          itemBuilder: (context, idx) {
+            // Orodha ya Kadi za Wachambuzi (Live Stream)
+            ListView.separated(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              itemCount: analysts.length,
+              separatorBuilder: (_, __) => const SizedBox(height: 12),
+              itemBuilder: (context, idx) {
             final a = analysts[idx];
             final analystId = a['id'] as int;
             final isExpanded = _expandedAnalysts.contains(analystId);
@@ -871,6 +828,7 @@ class _InsightHubScreenState extends State<InsightHubScreen> {
                           child: Image.network(
                             a['avatar'] as String,
                             fit: BoxFit.cover,
+                            alignment: Alignment.topCenter,
                             errorBuilder: (_, __, ___) => Container(
                               color: MColors.background,
                               child: const Icon(Icons.person, color: MColors.scoresCyan, size: 24),
@@ -1056,6 +1014,8 @@ class _InsightHubScreenState extends State<InsightHubScreen> {
         ),
       ],
     );
+  },
+);
   }
 
   // ==========================================================================
@@ -1186,6 +1146,120 @@ class _InsightHubScreenState extends State<InsightHubScreen> {
           },
           isSw: isSw,
         ),
+
+        // Kura Maalum zilizoundwa na Admin (Zikiwepo)
+        // Kura Maalum zilizoundwa kwenye Firebase Firestore (StreamBuilder)
+        StreamBuilder<List<Map<String, dynamic>>>(
+          stream: FirestoreService().streamPolls(),
+          builder: (context, snapshot) {
+            final customPolls = snapshot.data ?? [];
+            if (customPolls.isEmpty) return const SizedBox();
+
+            return Column(
+              children: customPolls.map((cp) {
+                final rawOptions = cp['options'] as List<dynamic>? ?? [];
+                final options = rawOptions.map((item) {
+                  Color c = MColors.scoresCyan;
+                  final rawColor = item['color'] ?? item['colorValue'];
+                  if (rawColor is Color) {
+                    c = rawColor;
+                  } else if (rawColor is int) {
+                    c = Color(rawColor);
+                  }
+                  return {
+                    'title': item['title']?.toString() ?? '',
+                    'color': c,
+                    'icon': Icons.how_to_vote_rounded,
+                  };
+                }).toList();
+
+                final pollId = cp['id'] as int? ?? 0;
+                final votesMap = Map<int, int>.from(cp['votesMap'] ?? {0: 10, 1: 5, 2: 8});
+
+                return Padding(
+                  padding: const EdgeInsets.only(top: 16),
+                  child: _buildPollCard(
+                    question: cp['question'] as String,
+                    subtitle: cp['subtitle'] as String,
+                    options: options,
+                    selectedOption: null,
+                    votesMap: votesMap,
+                    onVote: (idx) {
+                      FirestoreService().votePoll(pollId, idx);
+                    },
+                    onChangeVote: () {},
+                    isSw: isSw,
+                  ),
+                );
+              }).toList(),
+            );
+          },
+        ),
+
+        // Kitufe cha Haraka cha Kuingia Admin Panel (KINAONEKANA TU KAMA isOwner == TRUE!)
+        if (AuthService().isOwner) ...[
+          const SizedBox(height: 24),
+          Container(
+            width: double.infinity,
+            decoration: BoxDecoration(
+              color: MColors.surface,
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: MColors.scoresCyan.withValues(alpha: 0.3)),
+            ),
+            child: Material(
+              color: Colors.transparent,
+              child: InkWell(
+                borderRadius: BorderRadius.circular(14),
+                onTap: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(builder: (_) => AdminScreen(isSwahili: isSw)),
+                  ).then((_) {
+                    if (mounted) setState(() {});
+                  });
+                },
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: MColors.scoresCyan.withValues(alpha: 0.15),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: const Icon(Icons.admin_panel_settings_rounded, color: MColors.scoresCyan, size: 22),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              isSw ? 'Paneli ya Msimamizi (Admin Panel)' : 'Owner Admin Control Panel',
+                              style: GoogleFonts.outfit(
+                                fontSize: 14,
+                                fontWeight: FontWeight.bold,
+                                color: MColors.textWhite,
+                              ),
+                            ),
+                            Text(
+                              isSw ? 'Weka habari, wachambuzi, na kura mpya' : 'Add stories, expert analysis & fan polls',
+                              style: GoogleFonts.manrope(
+                                fontSize: 11,
+                                color: MColors.textWhite.withValues(alpha: 0.55),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const Icon(Icons.arrow_forward_ios_rounded, color: MColors.scoresCyan, size: 15),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
       ],
     );
   }

@@ -748,14 +748,30 @@ class FootballApiService {
   // --------------------------------------------------------------------------
   final Map<String, List<NewsArticleModel>> _newsCache = {};
 
+  // Habari Maalum zilizochapishwa na Msimamizi (Admin Custom Stories)
+  static final List<NewsArticleModel> customAdminNews = [];
+
+  void clearAllCache() {
+    _cachedTodaysMatches = null;
+    _cachedUpcomingMatches = null;
+    _standingsCache.clear();
+    _newsCache.clear();
+    _badgeCache.clear();
+    debugPrint('[M FOOTBALL PLUS] Kumbukumbu ya Cache zote zimesafishwa na Admin.');
+  }
+
   Future<List<NewsArticleModel>> getFootballNews({
     String category = 'all',
     bool forceRefresh = false,
   }) async {
     // Tumia habari zetu halisi za kiwango cha juu zenye lugha zote mbili (Kiswahili & English 100%)
     final authentic = _getAuthenticNews(category);
-    _newsCache[category] = authentic;
-    return authentic;
+    final filteredAdmin = category == 'all'
+        ? customAdminNews
+        : customAdminNews.where((a) => a.category == category).toList();
+    final combined = [...filteredAdmin, ...authentic];
+    _newsCache[category] = combined;
+    return combined;
   }
 
 
@@ -764,6 +780,9 @@ class FootballApiService {
 
 
 
+
+  // Inarudisha habari halisi za msingi kwa ajili ya FirestoreService na StreamBuilder
+  List<NewsArticleModel> getAuthenticNewsList(String category) => _getAuthenticNews(category);
 
   // ==========================================================================
   // M. HABARI HALISI ZA SOKA KWA MAKUNDI YOTE (AUTHENTIC BILINGUAL NEWS)

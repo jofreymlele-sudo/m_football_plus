@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'api_service.dart';
 import 'main.dart' show MColors;
+import 'firebase_service.dart';
 
 // ============================================================================
 // UKURASA WA HABARI ZA SOKA (NEWS SCREEN - UNIQUE & PREMIUM DESIGN)
@@ -46,14 +47,6 @@ class _NewsScreenState extends State<NewsScreen> {
   ];
 
   int _selectedCategoryIndex = 0;
-  bool _isLoading = false;
-  List<NewsArticleModel> _articles = [];
-
-  @override
-  void initState() {
-    super.initState();
-    _loadNews();
-  }
 
   @override
   void didUpdateWidget(covariant NewsScreen oldWidget) {
@@ -65,31 +58,9 @@ class _NewsScreenState extends State<NewsScreen> {
 
   NewsCategory get _currentCategory => _categories[_selectedCategoryIndex];
 
-  Future<void> _loadNews({bool forceRefresh = false}) async {
-    if (!mounted) return;
-    setState(() => _isLoading = true);
-
-    try {
-      final results = await FootballApiService().getFootballNews(
-        category: _currentCategory.key,
-        forceRefresh: forceRefresh,
-      );
-
-      if (!mounted) return;
-      setState(() {
-        _articles = results;
-        _isLoading = false;
-      });
-    } catch (e) {
-      if (!mounted) return;
-      setState(() => _isLoading = false);
-    }
-  }
-
   void _onCategorySelected(int index) {
     if (_selectedCategoryIndex != index) {
       setState(() => _selectedCategoryIndex = index);
-      _loadNews();
     }
   }
 
@@ -110,19 +81,29 @@ class _NewsScreenState extends State<NewsScreen> {
 
             const SizedBox(height: 8),
 
-            // 3. Orodha ya Habari zenye Kadi Kubwa ya Kwanza (Featured Hero)
+            // 3. Orodha ya Habari zenye StreamBuilder ya Firebase Firestore
             Expanded(
               child: RefreshIndicator(
                 color: MColors.scoresCyan,
                 backgroundColor: MColors.surface,
-                onRefresh: () => _loadNews(forceRefresh: true),
-                child: _isLoading
-                    ? const Center(
+                onRefresh: () async {
+                  setState(() {});
+                },
+                child: StreamBuilder<List<NewsArticleModel>>(
+                  stream: FirestoreService().streamNews(category: _currentCategory.key),
+                  builder: (context, snapshot) {
+                    if (snapshot.connectionState == ConnectionState.waiting) {
+                      return const Center(
                         child: CircularProgressIndicator(color: MColors.scoresCyan),
-                      )
-                    : _articles.isEmpty
-                        ? _buildEmptyState(isSw)
-                        : _buildNewsList(isSw),
+                      );
+                    }
+                    final articles = snapshot.data ?? [];
+                    if (articles.isEmpty) {
+                      return _buildEmptyState(isSw);
+                    }
+                    return _buildNewsList(articles, isSw);
+                  },
+                ),
               ),
             ),
           ],
@@ -250,10 +231,11 @@ class _NewsScreenState extends State<NewsScreen> {
     );
   }
 
-  // --- 3. News List with Hero Featured Card ---
-  Widget _buildNewsList(bool isSw) {
-    final featured = _articles.first;
-    final remaining = _articles.skip(1).toList();
+  // --- 3. News List with Hero Featured Card & StreamBuilder ---
+  Widget _buildNewsList(List<NewsArticleModel> articles, bool isSw) {
+    if (articles.isEmpty) return _buildEmptyState(isSw);
+    final featured = articles.first;
+    final remaining = articles.skip(1).toList();
 
     return ListView.builder(
       physics: const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics()),
@@ -291,16 +273,17 @@ class _NewsScreenState extends State<NewsScreen> {
           ],
         ),
         clipBehavior: Clip.antiAlias,
-        child: AspectRatio(
-          aspectRatio: 16 / 9.5,
+        child: SizedBox(
+          height: 280,
           child: Stack(
+            fit: StackFit.expand,
             children: [
-              // Image yenye fallback na alignment nzuri
+              // Image yenye fallback na alignment ya topCenter ili sura zionekane vizuri
               Positioned.fill(
                 child: Image.network(
                   article.imageUrl,
                   fit: BoxFit.cover,
-                  alignment: Alignment.center,
+                  alignment: Alignment.topCenter,
                   errorBuilder: (_, __, ___) => Container(
                     color: MColors.surface,
                     child: const Center(
@@ -310,7 +293,7 @@ class _NewsScreenState extends State<NewsScreen> {
                 ),
               ),
 
-              // Gradient Overlay
+              // Gradient Overlay (Haifichi picha juu, inatia giza laini chini tu kwa maandishi)
               Positioned.fill(
                 child: Container(
                   decoration: BoxDecoration(
@@ -319,10 +302,11 @@ class _NewsScreenState extends State<NewsScreen> {
                       end: Alignment.bottomCenter,
                       colors: [
                         Colors.transparent,
-                        Colors.black.withValues(alpha: 0.35),
-                        Colors.black.withValues(alpha: 0.95),
+                        Colors.transparent,
+                        Colors.black.withValues(alpha: 0.65),
+                        Colors.black.withValues(alpha: 0.96),
                       ],
-                      stops: const [0.25, 0.55, 1.0],
+                      stops: const [0.0, 0.52, 0.82, 1.0],
                     ),
                   ),
                 ),
@@ -424,16 +408,16 @@ class _NewsScreenState extends State<NewsScreen> {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Thumbnail Image yenye AspectRatio
+            // Thumbnail Image yenye AspectRatio na Alignment.topCenter
             ClipRRect(
               borderRadius: BorderRadius.circular(10),
               child: SizedBox(
-                width: 95,
-                height: 80,
+                width: 100,
+                height: 85,
                 child: Image.network(
                   article.imageUrl,
                   fit: BoxFit.cover,
-                  alignment: Alignment.center,
+                  alignment: Alignment.topCenter,
                   errorBuilder: (_, __, ___) => Container(
                     color: MColors.background,
                     child: const Icon(Icons.sports_soccer, size: 24, color: MColors.scoresCyan),
@@ -588,22 +572,25 @@ void showArticleReaderModal(BuildContext context, NewsArticleModel article, bool
               ),
             ),
 
-            // Article Image yenye AspectRatio (16:9) isiyokatwa
+            // Article Image yenye BoxFit.contain na Alignment.topCenter (Haipotezi sura au sehemu ya picha)
             ClipRRect(
               borderRadius: BorderRadius.circular(12),
-              child: AspectRatio(
-                aspectRatio: 16 / 9,
-                child: Container(
+              child: Container(
+                height: 250,
+                width: double.infinity,
+                decoration: BoxDecoration(
                   color: MColors.background,
-                  child: Image.network(
-                    article.imageUrl,
-                    fit: BoxFit.cover,
-                    alignment: Alignment.center,
-                    errorBuilder: (_, __, ___) => Container(
-                      color: MColors.background,
-                      child: const Center(
-                        child: Icon(Icons.newspaper_rounded, size: 40, color: MColors.scoresCyan),
-                      ),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: MColors.scoresCyan.withValues(alpha: 0.25)),
+                ),
+                child: Image.network(
+                  article.imageUrl,
+                  fit: BoxFit.contain,
+                  alignment: Alignment.topCenter,
+                  errorBuilder: (_, __, ___) => Container(
+                    color: MColors.background,
+                    child: const Center(
+                      child: Icon(Icons.newspaper_rounded, size: 40, color: MColors.scoresCyan),
                     ),
                   ),
                 ),
