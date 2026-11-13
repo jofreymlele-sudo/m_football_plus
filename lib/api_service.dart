@@ -837,6 +837,32 @@ class FootballApiService {
           ),
         ];
 
+      case 'tanzania': // Ligi Kuu ya NBC Tanzania
+        return const [
+          NewsArticleModel(
+            id: 'tz_1',
+            title: 'Kariakoo Derby Excitement Peaks as Yanga and Simba Finalise Tactical Plans',
+            titleSw: 'Msisimko wa Kariakoo Derby Wapanda Kileleni Yanga na Simba Zikikamilisha Mbinu',
+            description: 'Tanzania\'s premier football fixture approaches with coaches Miguel Gamondi and Fadlu Davids preparing decisive strategies.',
+            descriptionSw: 'Pambano kuu la soka Tanzania linakaribia huku makocha Miguel Gamondi na Fadlu Davids wakiweka mikakati ya mwisho ya ushindi.',
+            imageUrl: 'https://images.unsplash.com/photo-1508098682722-e99c43a406b2?w=800',
+            publishedAt: 'Dakika 25 zilizopita',
+            source: 'M-Football Tanzania',
+            category: 'NBC Ligi Kuu',
+          ),
+          NewsArticleModel(
+            id: 'tz_2',
+            title: 'Azam FC Mount Strong Title Challenge with Resounding NBC League Victory',
+            titleSw: 'Azam FC Yarejea Kwenye Mbio za Ubingwa wa NBC Baada ya Ushindi Mnono',
+            description: 'Feisal Salum and the Chamazi millionaires displayed clinical attacking prowess to keep pressure on the league leaders.',
+            descriptionSw: 'Feisal Salum na kikosi cha matajiri wa Chamazi wameonyesha kiwango kizuri cha kushambulia na kuendelea kuweka presha kileleni.',
+            imageUrl: 'https://images.unsplash.com/photo-1574629810360-7efbbe195018?w=800',
+            publishedAt: 'Saa 2 zilizopita',
+            source: 'Tanzania Football News',
+            category: 'NBC Ligi Kuu',
+          ),
+        ];
+
       case 'epl': // Ligi Kuu Uingereza
         return const [
           NewsArticleModel(

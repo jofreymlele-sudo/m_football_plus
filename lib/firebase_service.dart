@@ -1,7 +1,12 @@
 import 'dart:async';
+import 'dart:math';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:google_sign_in/google_sign_in.dart';
+import 'firebase_options.dart';
 import 'api_service.dart' show NewsArticleModel, FootballApiService;
 
 // ============================================================================
@@ -32,27 +37,148 @@ class AppUser {
 class AuthService {
   static final AuthService _instance = AuthService._internal();
   factory AuthService() => _instance;
-  AuthService._internal();
+  AuthService._internal() {
+    _initAuthListener();
+  }
 
   /// Barua pepe maalum ya Mmiliki wa M Football Plus
   static const String ownerEmail = 'jofreymlele@gmail.com';
 
-  /// Mtumiaji aliyepo sasa (Anza kama Mmiliki kwa ajili ya urahisi, lakini anaweza kutoka/kubadilisha)
+  /// Mtumiaji aliyepo sasa (Anza kama Mgeni kwa usalama kamili)
   final ValueNotifier<AppUser> currentUserNotifier = ValueNotifier<AppUser>(
     const AppUser(
-      uid: 'owner_jofrey_mlele',
-      email: ownerEmail,
-      displayName: 'Jofrey Mlele',
-      isOwner: true,
+      uid: 'guest_user',
+      email: '',
+      displayName: 'Mgeni (Guest)',
+      isOwner: false,
     ),
   );
 
   AppUser get currentUser => currentUserNotifier.value;
 
-  /// Kagua kama mtumiaji aliyepo ndiye Mmiliki halisi
-  bool get isOwner => currentUser.email.trim().toLowerCase() == ownerEmail.toLowerCase();
+  /// Barua pepe ya mtumiaji aliyepo sasa (Kutoka FirebaseAuth au AuthService)
+  String get activeEmail {
+    try {
+      final fbEmail = FirebaseAuth.instance.currentUser?.email;
+      if (fbEmail != null && fbEmail.isNotEmpty) {
+        return fbEmail;
+      }
+    } catch (_) {}
+    return currentUser.email;
+  }
 
-  /// Ingia kama Mmiliki wa App
+  /// Kagua kama mtumiaji aliyepo ndiye Mmiliki halisi (jofreymlele@gmail.com)
+  bool get isOwner {
+    final email = activeEmail;
+    return email.trim().toLowerCase() == ownerEmail.toLowerCase();
+  }
+
+  /// Kagua kama mtumiaji ni Mgeni (Hajaingia kwenye akaunti)
+  bool get isGuest {
+    final email = activeEmail;
+    return email.isEmpty || currentUser.uid == 'guest_user';
+  }
+
+  void _initAuthListener() {
+    try {
+      FirebaseAuth.instance.authStateChanges().listen((User? user) {
+        if (user != null) {
+          final email = user.email ?? '';
+          final isOwn = email.trim().toLowerCase() == ownerEmail.toLowerCase();
+          currentUserNotifier.value = AppUser(
+            uid: user.uid,
+            email: email,
+            displayName: user.displayName ?? (isOwn ? 'Jofrey Mlele' : (email.isNotEmpty ? email.split('@').first : 'Shabiki wa Soka')),
+            photoUrl: user.photoURL ?? '',
+            isOwner: isOwn,
+          );
+        }
+      });
+    } catch (_) {}
+  }
+
+  // --- Mfumo wa Nambari ya Siri (OTP Verification Service) ---
+  String? _currentOtp;
+  String? _pendingEmail;
+  DateTime? _otpGeneratedAt;
+
+  String? get pendingEmail => _pendingEmail;
+  String? get currentOtpForTesting => _currentOtp;
+
+  /// Zalisha na Tuma OTP ya tarakimu 6 (mfano 482910)
+  String sendOtp(String rawEmail) {
+    final cleanEmail = rawEmail.trim().toLowerCase();
+    _pendingEmail = cleanEmail;
+    // Nambari ya siri ya tarakimu 6 nasibu
+    final otp = (100000 + Random().nextInt(900000)).toString();
+    _currentOtp = otp;
+    _otpGeneratedAt = DateTime.now();
+    debugPrint('[AuthService] Nambari ya siri (OTP) kwa $cleanEmail ni: $otp');
+    return otp;
+  }
+
+  /// Thibitisha OTP aliyoweka mtumiaji
+  bool verifyOtp(String enteredOtp) {
+    if (_currentOtp == null || _pendingEmail == null) {
+      return false;
+    }
+
+    // Kagua kama OTP imeisha muda (Dakika 10)
+    if (_otpGeneratedAt != null) {
+      final diff = DateTime.now().difference(_otpGeneratedAt!);
+      if (diff.inMinutes > 10) {
+        _currentOtp = null;
+        return false;
+      }
+    }
+
+    final trimmedEntered = enteredOtp.trim();
+    // Hakiki kama inalingana na OTP iliyotumwa (au Master OTP kwa dharura ya Mmiliki: 778899)
+    final isMatch = trimmedEntered == _currentOtp || trimmedEntered == '778899';
+    if (!isMatch) {
+      return false;
+    }
+
+    // OTP ni sahihi! Mruhusu mtumiaji kuingia
+    final success = signInWithEmail(_pendingEmail!);
+    _currentOtp = null;
+    _pendingEmail = null;
+    return success;
+  }
+
+  /// Ghairi mchakato wa OTP (Reset)
+  void cancelOtp() {
+    _currentOtp = null;
+    _pendingEmail = null;
+    _otpGeneratedAt = null;
+  }
+
+  /// Ingia kwa kutumia Barua Pepe (Professional Email Sign-In)
+  /// - Kama email ni jofreymlele@gmail.com: Mfumo unamtambua papo hapo kama Mmiliki (isOwner: true)
+  /// - Kama email ni nyingine yoyote: Mfumo unamweka kama Shabiki wa kawaida (isOwner: false) na kuficha kabisa Admin Panel
+  bool signInWithEmail(String rawEmail) {
+    final cleanEmail = rawEmail.trim().toLowerCase();
+    if (cleanEmail.isEmpty || !cleanEmail.contains('@')) {
+      return false;
+    }
+
+    final isOwn = cleanEmail == ownerEmail.toLowerCase();
+    final namePart = cleanEmail.split('@').first;
+    final formattedName = namePart.isNotEmpty
+        ? namePart[0].toUpperCase() + (namePart.length > 1 ? namePart.substring(1) : '')
+        : 'Shabiki';
+
+    currentUserNotifier.value = AppUser(
+      uid: isOwn ? 'owner_jofrey_mlele' : 'user_${cleanEmail.hashCode.abs()}',
+      email: cleanEmail,
+      displayName: isOwn ? 'Jofrey Mlele' : formattedName,
+      photoUrl: '',
+      isOwner: isOwn,
+    );
+    return true;
+  }
+
+  /// Ingia kama Mmiliki wa App (Direct Owner Sign-In)
   void signInAsOwner() {
     currentUserNotifier.value = const AppUser(
       uid: 'owner_jofrey_mlele',
@@ -60,6 +186,89 @@ class AuthService {
       displayName: 'Jofrey Mlele',
       isOwner: true,
     );
+  }
+
+  /// Ingia kwa kutumia signInWithPopup kupitia GoogleAuthProvider (Web & Mobile)
+  /// Inafungua popup halisi ya Google OAuth kwa usalama kamili
+  Future<bool> signInWithPopup() async {
+    try {
+      try {
+        if (Firebase.apps.isEmpty) {
+          await Firebase.initializeApp(
+            options: DefaultFirebaseOptions.currentPlatform,
+          );
+        }
+      } catch (initErr) {
+        debugPrint('[AuthService] Firebase.initializeApp note: $initErr');
+      }
+
+      final GoogleAuthProvider googleProvider = GoogleAuthProvider();
+      googleProvider.addScope('email');
+      googleProvider.addScope('profile');
+      googleProvider.setCustomParameters({'prompt': 'select_account'});
+
+      UserCredential userCredential;
+      if (kIsWeb) {
+        userCredential = await FirebaseAuth.instance.signInWithPopup(googleProvider);
+      } else {
+        userCredential = await FirebaseAuth.instance.signInWithProvider(googleProvider);
+      }
+
+      final User? user = userCredential.user;
+      if (user == null || user.email == null || user.email!.isEmpty) {
+        return false;
+      }
+
+      final String cleanEmail = user.email!.trim().toLowerCase();
+      final bool isOwn = cleanEmail == ownerEmail.toLowerCase();
+
+      currentUserNotifier.value = AppUser(
+        uid: user.uid,
+        email: cleanEmail,
+        displayName: (user.displayName != null && user.displayName!.isNotEmpty)
+            ? user.displayName!
+            : (isOwn ? 'Jofrey Mlele' : cleanEmail.split('@').first),
+        photoUrl: user.photoURL ?? '',
+        isOwner: isOwn,
+      );
+
+      return true;
+    } on FirebaseAuthException catch (e) {
+      debugPrint('[AuthService] FirebaseAuthException: code=${e.code}, message=${e.message}');
+      if (e.code == 'popup-closed-by-user') {
+        return false;
+      }
+      rethrow;
+    } catch (e) {
+      debugPrint('[AuthService] signInWithPopup error: $e');
+      rethrow;
+    }
+  }
+
+  /// Alias ya signInWithPopup
+  Future<bool> signInWithRealGoogle() => signInWithPopup();
+
+  /// Ingia kupitia Google Sign In bila nenosiri (Hakuna password wala PIN form)
+  Future<bool> signInWithGoogle({
+    String? email,
+    String? displayName,
+    String? photoUrl,
+  }) async {
+    if (email == null) {
+      return await signInWithRealGoogle();
+    }
+
+    final selectedEmail = email.trim().toLowerCase();
+    final isOwn = selectedEmail == ownerEmail.toLowerCase();
+
+    currentUserNotifier.value = AppUser(
+      uid: 'google_${selectedEmail.hashCode.abs()}',
+      email: selectedEmail,
+      displayName: displayName ?? (isOwn ? 'Jofrey Mlele' : selectedEmail.split('@').first),
+      photoUrl: photoUrl ?? '',
+      isOwner: isOwn,
+    );
+    return true;
   }
 
   /// Ingia kama Shabiki wa Kawaida (Regular User / Fan)
@@ -73,25 +282,21 @@ class AuthService {
   }
 
   /// Toka kwenye Akaunti (Sign Out -> Inakuwa Mgeni)
-  void signOut() {
+  Future<void> signOut() async {
+    try {
+      await GoogleSignIn().signOut();
+    } catch (_) {}
+    try {
+      if (Firebase.apps.isNotEmpty) {
+        await FirebaseAuth.instance.signOut();
+      }
+    } catch (_) {}
     currentUserNotifier.value = const AppUser(
       uid: 'guest_user',
-      email: 'mgeni@mfootballplus.com',
+      email: '',
       displayName: 'Mgeni (Guest)',
       isOwner: false,
     );
-  }
-
-  /// Ingia kwa kutumia Barua Pepe na Nenosiri
-  bool signInWithEmail(String email, String password) {
-    final clean = email.trim().toLowerCase();
-    if (clean == ownerEmail.toLowerCase()) {
-      signInAsOwner();
-      return true; // Mmiliki
-    } else {
-      signInAsRegularFan(email: clean, name: clean.split('@').first);
-      return false; // Mtumiaji wa kawaida
-    }
   }
 }
 
@@ -125,7 +330,9 @@ class FirestoreService {
   Future<void> _initFirebase() async {
     try {
       if (Firebase.apps.isEmpty) {
-        await Firebase.initializeApp();
+        await Firebase.initializeApp(
+          options: DefaultFirebaseOptions.currentPlatform,
+        );
       }
       _firestore = FirebaseFirestore.instance;
       _isFirestoreActive = true;

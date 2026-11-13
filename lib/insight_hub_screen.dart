@@ -41,6 +41,9 @@ class _InsightHubScreenState extends State<InsightHubScreen> {
   int? _poll2SelectedOption; // null = hajapiga, 0 = Pacome, 1 = Jean Ahoua, 2 = Fei Toto
   final Map<int, int> _poll2Votes = {0: 2150, 1: 1780, 2: 1420};
 
+  // Kura Maalum kutoka Admin (Poll ID -> Chaguo lililopigiwa kura)
+  final Map<int, int> _customPollSelectedOptions = {};
+
   // Wachambuzi - Expand & Likes state
   final Set<int> _expandedAnalysts = {};
   final Set<int> _likedAnalysts = {};
@@ -1182,12 +1185,21 @@ class _InsightHubScreenState extends State<InsightHubScreen> {
                     question: cp['question'] as String,
                     subtitle: cp['subtitle'] as String,
                     options: options,
-                    selectedOption: null,
+                    selectedOption: _customPollSelectedOptions[pollId],
                     votesMap: votesMap,
                     onVote: (idx) {
-                      FirestoreService().votePoll(pollId, idx);
+                      setState(() {
+                        if (_customPollSelectedOptions[pollId] == null) {
+                          _customPollSelectedOptions[pollId] = idx;
+                          FirestoreService().votePoll(pollId, idx);
+                        }
+                      });
                     },
-                    onChangeVote: () {},
+                    onChangeVote: () {
+                      setState(() {
+                        _customPollSelectedOptions.remove(pollId);
+                      });
+                    },
                     isSw: isSw,
                   ),
                 );

@@ -1,18 +1,20 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'firebase_options.dart';
 import 'api_service.dart';
 import 'matches_screen.dart';
 import 'standings_screen.dart';
 import 'news_screen.dart';
 import 'insight_hub_screen.dart';
-import 'admin_screen.dart';
+import 'profile_screen.dart';
 import 'firebase_service.dart';
 
 // ============================================================================
 // 0. ENTRY POINT YA FLUTTER (MAIN FUNCTION & APP ROOT)
 // ============================================================================
-void main() {
+void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   SystemChrome.setSystemUIOverlayStyle(
     const SystemUiOverlayStyle(
@@ -22,6 +24,18 @@ void main() {
       systemNavigationBarIconBrightness: Brightness.light,
     ),
   );
+
+  // Anzisha Firebase kikamilifu kabla ya runApp()
+  try {
+    if (Firebase.apps.isEmpty) {
+      await Firebase.initializeApp(
+        options: DefaultFirebaseOptions.currentPlatform,
+      );
+    }
+  } catch (e) {
+    debugPrint('[Firebase Init] Note: $e');
+  }
+
   runApp(const MFootballPlusApp());
 }
 
@@ -444,7 +458,7 @@ class _MFootballPlusHomePageState extends State<MFootballPlusHomePage> {
         Padding(
           padding: const EdgeInsets.only(right: 16, left: 4),
           child: GestureDetector(
-            onTap: () => _openProfileModal(context, isSwahili),
+            onTap: () => _openProfileScreen(context, isSwahili),
             child: Container(
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
@@ -465,280 +479,22 @@ class _MFootballPlusHomePageState extends State<MFootballPlusHomePage> {
     );
   }
 
-  // --- Modal ya Wasifu wa Mmiliki (Profile & Admin Panel Sheet) ---
-  void _openProfileModal(BuildContext context, bool isSwahili) {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: Colors.transparent,
-      isScrollControlled: true,
-      builder: (ctx) {
-        return StatefulBuilder(
-          builder: (modalContext, setModalState) {
-            final auth = AuthService();
-            final currentUser = auth.currentUser;
-            final isOwner = auth.isOwner;
-
-            return Container(
-              decoration: const BoxDecoration(
-                color: MColors.background,
-                borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-                border: Border(top: BorderSide(color: MColors.scoresCyan, width: 1.5)),
-              ),
-              padding: const EdgeInsets.fromLTRB(20, 12, 20, 32),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  // Grab handle
-                  Container(
-                    width: 40,
-                    height: 4,
-                    decoration: BoxDecoration(
-                      color: MColors.textWhite.withValues(alpha: 0.3),
-                      borderRadius: BorderRadius.circular(2),
-                    ),
-                  ),
-                  const SizedBox(height: 18),
-
-                  // User Header
-                  Row(
-                    children: [
-                      Container(
-                        width: 52,
-                        height: 52,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          border: Border.all(
-                            color: isOwner ? MColors.scoresCyan : Colors.white30,
-                            width: 1.8,
-                          ),
-                          color: MColors.surface,
-                        ),
-                        child: Icon(
-                          isOwner ? Icons.admin_panel_settings_rounded : Icons.person,
-                          color: isOwner ? MColors.scoresCyan : MColors.textWhite,
-                          size: 30,
-                        ),
-                      ),
-                      const SizedBox(width: 14),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              children: [
-                                Text(
-                                  currentUser.displayName,
-                                  style: GoogleFonts.outfit(
-                                    fontSize: 17,
-                                    fontWeight: FontWeight.bold,
-                                    color: MColors.textWhite,
-                                  ),
-                                ),
-                                if (isOwner) ...[
-                                  const SizedBox(width: 6),
-                                  const Icon(Icons.verified_rounded, size: 16, color: MColors.scoresCyan),
-                                ],
-                              ],
-                            ),
-                            Text(
-                              currentUser.email,
-                              style: GoogleFonts.manrope(
-                                fontSize: 11.5,
-                                color: isOwner ? MColors.highlightsGold : MColors.textWhite.withValues(alpha: 0.6),
-                                fontWeight: isOwner ? FontWeight.w700 : FontWeight.normal,
-                              ),
-                            ),
-                            const SizedBox(height: 2),
-                            Text(
-                              isOwner
-                                  ? (isSwahili ? 'Mmiliki wa App (Administrator)' : 'App Owner & Administrator')
-                                  : (isSwahili ? 'Shabiki wa Soka (Fan Account)' : 'Football Fan (Guest)'),
-                              style: GoogleFonts.manrope(
-                                fontSize: 10.5,
-                                color: isOwner ? MColors.scoresCyan : MColors.textWhite.withValues(alpha: 0.4),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-
-                  const SizedBox(height: 20),
-
-                  // ==========================================================
-                  // KITUFE CHA ADMIN PANEL: KINAONEKANA TU KWA MMILIKI!
-                  // ==========================================================
-                  if (isOwner) ...[
-                    Container(
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          colors: [
-                            MColors.surface,
-                            MColors.scoresCyan.withValues(alpha: 0.18),
-                          ],
-                        ),
-                        borderRadius: BorderRadius.circular(16),
-                        border: Border.all(color: MColors.scoresCyan, width: 1.5),
-                        boxShadow: [
-                          BoxShadow(
-                            color: MColors.scoresCyan.withValues(alpha: 0.15),
-                            blurRadius: 14,
-                            offset: const Offset(0, 3),
-                          ),
-                        ],
-                      ),
-                      child: Material(
-                        color: Colors.transparent,
-                        child: InkWell(
-                          borderRadius: BorderRadius.circular(16),
-                          onTap: () {
-                            Navigator.of(ctx).pop();
-                            Navigator.of(context).push(
-                              MaterialPageRoute(
-                                builder: (_) => AdminScreen(isSwahili: isSwahili),
-                              ),
-                            );
-                          },
-                          child: Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                            child: Row(
-                              children: [
-                                Container(
-                                  padding: const EdgeInsets.all(10),
-                                  decoration: BoxDecoration(
-                                    color: MColors.scoresCyan.withValues(alpha: 0.2),
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
-                                  child: const Icon(Icons.admin_panel_settings_rounded, color: MColors.scoresCyan, size: 24),
-                                ),
-                                const SizedBox(width: 14),
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      Row(
-                                        children: [
-                                          Text(
-                                            isSwahili ? 'Paneli ya Msimamizi' : 'Admin Panel',
-                                            style: GoogleFonts.outfit(
-                                              fontSize: 15,
-                                              fontWeight: FontWeight.bold,
-                                              color: MColors.textWhite,
-                                            ),
-                                          ),
-                                          const SizedBox(width: 8),
-                                          Container(
-                                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                            decoration: BoxDecoration(
-                                              color: MColors.highlightsGold.withValues(alpha: 0.2),
-                                              borderRadius: BorderRadius.circular(6),
-                                            ),
-                                            child: Text(
-                                              'OWNER ONLY',
-                                              style: GoogleFonts.manrope(
-                                                fontSize: 9,
-                                                fontWeight: FontWeight.w900,
-                                                color: MColors.highlightsGold,
-                                              ),
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                      const SizedBox(height: 2),
-                                      Text(
-                                        isSwahili ? 'Dhibiti Habari, Wachambuzi, na Kura' : 'Control News, Experts & Polls',
-                                        style: GoogleFonts.manrope(
-                                          fontSize: 11,
-                                          color: MColors.textWhite.withValues(alpha: 0.6),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                                const Icon(Icons.arrow_forward_ios_rounded, color: MColors.scoresCyan, size: 16),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                  ],
-
-                  // Badili Akaunti (Tester ya Ulinzi wa Usalama)
-                  Container(
-                    decoration: BoxDecoration(
-                      color: MColors.surface,
-                      borderRadius: BorderRadius.circular(14),
-                      border: Border.all(color: MColors.scoresCyan.withValues(alpha: 0.15)),
-                    ),
-                    child: Column(
-                      children: [
-                        if (isOwner)
-                          ListTile(
-                            leading: const Icon(Icons.person_outline_rounded, color: Colors.amberAccent, size: 20),
-                            title: Text(
-                              isSwahili ? 'Jaribu kama Shabiki (Toka Admin)' : 'Test as Regular Fan (Sign Out)',
-                              style: GoogleFonts.outfit(fontSize: 13, fontWeight: FontWeight.bold, color: Colors.amberAccent),
-                            ),
-                            subtitle: Text(
-                              isSwahili ? 'Kitufe cha Admin kitajificha mara moja' : 'Hides Admin button immediately',
-                              style: GoogleFonts.manrope(fontSize: 10.5, color: MColors.textWhite.withValues(alpha: 0.5)),
-                            ),
-                            onTap: () {
-                              auth.signOut();
-                              setModalState(() {});
-                              setState(() {});
-                            },
-                          )
-                        else
-                          ListTile(
-                            leading: const Icon(Icons.verified_user_rounded, color: MColors.scoresCyan, size: 20),
-                            title: Text(
-                              isSwahili ? 'Ingia kama Mmiliki (${AuthService.ownerEmail})' : 'Sign In as Owner (${AuthService.ownerEmail})',
-                              style: GoogleFonts.outfit(fontSize: 13, fontWeight: FontWeight.bold, color: MColors.scoresCyan),
-                            ),
-                            subtitle: Text(
-                              isSwahili ? 'Fungua Paneli ya Msimamizi' : 'Unlocks Admin Panel access',
-                              style: GoogleFonts.manrope(fontSize: 10.5, color: MColors.textWhite.withValues(alpha: 0.5)),
-                            ),
-                            onTap: () {
-                              auth.signInAsOwner();
-                              setModalState(() {});
-                              setState(() {});
-                            },
-                          ),
-                        const Divider(color: Color(0x1AFFFFFF), height: 1),
-                        ListTile(
-                          leading: const Icon(Icons.translate_rounded, color: MColors.scoresCyan, size: 20),
-                          title: Text(
-                            isSwahili ? 'Badilisha Lugha' : 'Switch Language',
-                            style: GoogleFonts.outfit(fontSize: 13.5, fontWeight: FontWeight.bold, color: MColors.textWhite),
-                          ),
-                          trailing: Text(
-                            isSwahili ? 'Kiswahili 🇹🇿' : 'English 🇬🇧',
-                            style: GoogleFonts.manrope(fontSize: 12, fontWeight: FontWeight.bold, color: MColors.highlightsGold),
-                          ),
-                          onTap: () {
-                            Navigator.of(ctx).pop();
-                            setState(() {
-                              _currentLanguage = _currentLanguage == AppLanguage.swahili
-                                  ? AppLanguage.english
-                                  : AppLanguage.swahili;
-                            });
-                          },
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            );
+  // --- Ukurasa wa Wasifu na Mipangilio (Profile & Settings Screen) ---
+  void _openProfileScreen(BuildContext context, bool isSwahili) {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => ProfileScreen(
+          isSwahili: isSwahili,
+          onLanguageChanged: (newLang) {
+            setState(() {
+              _currentLanguage = newLang;
+            });
           },
-        );
-      },
-    );
+        ),
+      ),
+    ).then((_) {
+      if (mounted) setState(() {});
+    });
   }
 
   // --- Mwili Mkuu wa Home Page ---

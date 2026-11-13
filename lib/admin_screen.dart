@@ -567,6 +567,7 @@ class _AdminScreenState extends State<AdminScreen> with SingleTickerProviderStat
                     DropdownMenuItem(value: 'epl', child: Text('Premier League (Uingereza)')),
                     DropdownMenuItem(value: 'ucl', child: Text('Klabu Bingwa (UCL)')),
                     DropdownMenuItem(value: 'laliga', child: Text('La Liga (Hispania)')),
+                    DropdownMenuItem(value: 'transfer', child: Text(isSw ? 'Usajili & Tetesi (Transfers)' : 'Transfers & Rumours')),
                   ],
                   onChanged: (val) {
                     if (val != null) setState(() => _selectedStoryCategory = val);
@@ -730,8 +731,9 @@ class _AdminScreenState extends State<AdminScreen> with SingleTickerProviderStat
                     ),
                     IconButton(
                       icon: const Icon(Icons.delete_outline_rounded, color: Colors.redAccent, size: 20),
-                      onPressed: () {
-                        setState(() => _adminService.deleteStory(story.id));
+                      onPressed: () async {
+                        await _adminService.deleteStory(story.id);
+                        if (mounted) setState(() {});
                         _showSuccessSnackBar(isSw ? 'Habari imefutwa.' : 'Story deleted.');
                       },
                     ),
@@ -986,8 +988,9 @@ class _AdminScreenState extends State<AdminScreen> with SingleTickerProviderStat
                     ),
                     IconButton(
                       icon: const Icon(Icons.delete_outline_rounded, color: Colors.redAccent, size: 20),
-                      onPressed: () {
-                        setState(() => _adminService.deleteAnalysis(a['id'] as int));
+                      onPressed: () async {
+                        await _adminService.deleteAnalysis(a['id'] as int);
+                        if (mounted) setState(() {});
                         _showSuccessSnackBar(isSw ? 'Uchambuzi umefutwa.' : 'Analysis deleted.');
                       },
                     ),
@@ -1174,8 +1177,9 @@ class _AdminScreenState extends State<AdminScreen> with SingleTickerProviderStat
                         ),
                         IconButton(
                           icon: const Icon(Icons.delete_outline_rounded, color: Colors.redAccent, size: 20),
-                          onPressed: () {
-                            setState(() => _adminService.deletePoll(p['id'] as int));
+                          onPressed: () async {
+                            await _adminService.deletePoll(p['id'] as int);
+                            if (mounted) setState(() {});
                             _showSuccessSnackBar(isSw ? 'Kura imefutwa.' : 'Poll deleted.');
                           },
                         ),

@@ -40,6 +40,7 @@ class NewsScreen extends StatefulWidget {
 class _NewsScreenState extends State<NewsScreen> {
   static const List<NewsCategory> _categories = [
     NewsCategory(key: 'all', nameSw: 'Zote', nameEn: 'All News', icon: Icons.public_rounded),
+    NewsCategory(key: 'tanzania', nameSw: 'NBC Ligi Kuu', nameEn: 'NBC PL', icon: Icons.sports_soccer),
     NewsCategory(key: 'ucl', nameSw: 'Klabu Bingwa', nameEn: 'Champions League', icon: Icons.emoji_events_outlined),
     NewsCategory(key: 'epl', nameSw: 'Uingereza', nameEn: 'Premier League', icon: Icons.sports_soccer),
     NewsCategory(key: 'laliga', nameSw: 'Hispania', nameEn: 'La Liga', icon: Icons.shield_outlined),
